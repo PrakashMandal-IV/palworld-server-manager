@@ -3,9 +3,13 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [1.0.1] — Unreleased
+## [1.1.0] — 2026-07-08
 
 ### Added
+- **Change a world's install folder** from the Admin tab. Point a world at the
+  correct `PalServer` folder on any drive without removing and re-adding it — the
+  new path is validated as a real Palworld install, and mods, saves, and settings
+  are then read from the right place. The world must be stopped to change it.
 - **"Send test" button** for Discord notifications in Settings. Sends a test
   message to the entered webhook URL (before saving) and reports whether Discord
   accepted it, so you can verify the webhook without having to start or stop a

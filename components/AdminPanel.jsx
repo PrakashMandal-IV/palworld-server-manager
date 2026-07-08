@@ -11,6 +11,27 @@ export default function AdminPanel({ world, running, onChange }) {
   const [crashGuard, setCrashGuard] = useState(!!world.crash_guard);
   const [community, setCommunity] = useState(!!world.community_server);
   const [saving, setSaving] = useState(false);
+  const [installDir, setInstallDir] = useState(world.install_dir || "");
+  const [movingDir, setMovingDir] = useState(false);
+  const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
+
+  const pickDir = async () => {
+    if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) setInstallDir(p); }
+    else toast("Type the full server folder path (native picker is in the desktop app).");
+  };
+
+  const changeInstallDir = async () => {
+    const target = installDir.trim();
+    if (!target || target === world.install_dir) return;
+    if (running) return toast("Stop the world before changing its install folder.", "error");
+    setMovingDir(true);
+    try {
+      await api(`/api/worlds/${world.world_id}`, { method: "PATCH", body: { install_dir: target } });
+      toast("Install folder updated", "success");
+      onChange();
+    } catch (e) { toast(e.message, "error"); }
+    finally { setMovingDir(false); }
+  };
 
   const broadcast = async () => {
     if (!announce.trim()) return;
@@ -90,6 +111,25 @@ export default function AdminPanel({ world, running, onChange }) {
             Crash guardian has restarted this world {world.crash_count} time{world.crash_count === 1 ? "" : "s"}.
           </p>
         )}
+      </section>
+
+      <section>
+        <h3 className="heading" style={{ fontSize: "1rem" }}>Install folder</h3>
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem", marginTop: 0, marginBottom: "0.6rem" }}>
+          Where this world&apos;s server files live. The Mods, saves, and settings are all read from here,
+          so point this at the correct <code>PalServer</code> folder (on any drive). The world must be stopped to change it.
+        </p>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <input className="input" value={installDir} onChange={(e) => setInstallDir(e.target.value)}
+            disabled={running || movingDir}
+            placeholder={isElectron ? "Click Browse to choose the folder" : "e.g. D:\\SteamLibrary\\steamapps\\common\\PalServer"} />
+          <button className="btn btn-ghost" onClick={pickDir} disabled={running || movingDir}><Icon name="folder" /> Browse</button>
+          <button className="btn btn-primary" onClick={changeInstallDir}
+            disabled={running || movingDir || !installDir.trim() || installDir.trim() === world.install_dir}>
+            {movingDir ? "Checking…" : "Change"}
+          </button>
+        </div>
+        {running && <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem", marginTop: 4 }}>Stop the world to change its folder.</p>}
       </section>
 
       <section>

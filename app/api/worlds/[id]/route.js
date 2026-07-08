@@ -46,6 +46,27 @@ export async function PATCH(req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
   const patch = await req.json();
+
+  // Changing the install folder is special: validate it points at a real Palworld
+  // server, refuse while running, and rebase this world's build id onto the new path.
+  if ("install_dir" in patch && String(patch.install_dir).trim() !== w.install_dir) {
+    if (sup.isRunning(w.world_id) || sup.pidAlive(w.process_id)) {
+      return NextResponse.json({ ok: false, error: "Stop the world before changing its install folder." }, { status: 409 });
+    }
+    const detect = require("@/lib/detect");
+    const info = detect.inspect(String(patch.install_dir).trim());
+    if (!info.valid) {
+      return NextResponse.json({ ok: false, error: info.reason || "Not a valid Palworld server install." }, { status: 400 });
+    }
+    const rebased = dbm.updateWorld(params.id, {
+      install_dir: info.installDir,
+      build_id: info.buildId || null,
+    });
+    // re-apply this world's ports/password into the newly pointed install
+    try { ini.applyWorldNetworkSettings(info.installDir, rebased); } catch {}
+    dbm.logEvent(params.id, "settings", `Install folder changed to ${info.installDir}`);
+  }
+
   const allowed = ["display_name", "admin_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled"];
   const clean = {};
   for (const k of allowed) if (k in patch) clean[k] = patch[k];
