@@ -6,6 +6,18 @@ a server (new or existing), and manage everything from a clean interface.
 
 ---
 
+## Screenshots
+
+| Your worlds | World overview |
+| --- | --- |
+| ![Home](preview/Home.png) | ![World Overview](preview/World%20Overview.png) |
+
+| Settings editor | Admin |
+| --- | --- |
+| ![World Settings](preview/World%20Settings.png) | ![World Admin](preview/World%20Admin.png) |
+
+---
+
 ## What it does
 
 - **Provision new servers** via SteamCMD, or **adopt an existing** Palworld dedicated
@@ -25,6 +37,19 @@ a server (new or existing), and manage everything from a clean interface.
   moving between machines.
 - **Multiple worlds** side by side, each with its own ports (auto-assigned to avoid
   collisions).
+
+---
+
+## Download
+
+Grab the latest installer from the
+[**Releases**](https://github.com/PrakashMandal-IV/palworld-server-manager/releases/latest) page:
+
+- **Windows:** `Palworld Server Manager Setup <version>.exe`
+- **Linux:** `Palworld Server Manager-<version>.AppImage`
+
+> The Windows installer is not yet code-signed, so SmartScreen may show an
+> "unrecognized app" warning. Click **More info → Run anyway** to proceed.
 
 ---
 

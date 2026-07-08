@@ -5,4 +5,4 @@ dist-standalone/
 .data/
 *.log
 .DS_Store
-.claude/settings.local.json
+.claude/

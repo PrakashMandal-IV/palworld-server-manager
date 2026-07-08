@@ -6,9 +6,6 @@ on:
       - "v*"
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -19,9 +16,14 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run dist:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:next
+      - run: npm run prepare:standalone
+      - run: npx electron-builder --win --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: release/*.exe
+          if-no-files-found: error
 
   build-linux:
     runs-on: ubuntu-latest
@@ -32,6 +34,27 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run dist:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run build:next
+      - run: npm run prepare:standalone
+      - run: npx electron-builder --linux --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: release/*.AppImage
+          if-no-files-found: error
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          draft: false
+          generate_release_notes: true
