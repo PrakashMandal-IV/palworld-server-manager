@@ -55,11 +55,12 @@ export default function WorldDetail() {
 
   const doUpdate = async () => {
     setBusy("update");
-    toast("Updating — this can take a while…");
     try {
-      const r = await api(`/api/worlds/${id}/update`, { method: "POST" });
-      toast(r.result?.ok ? `Updated to build ${r.result.build}` : `Update failed: ${r.result?.error}`, r.result?.ok ? "success" : "error");
-      load();
+      await api(`/api/worlds/${id}/update`, { method: "POST" });
+      try { window.__palJobsPing?.(); } catch {}
+      toast("Update started — track progress in the downloads tray", "success");
+      // reflect status changes as the background job runs
+      setTimeout(load, 1200);
     } catch (e) { toast(e.message, "error"); }
     finally { setBusy(null); }
   };
@@ -117,7 +118,7 @@ export default function WorldDetail() {
             ) : (
               <button className="btn btn-primary" disabled={busy} onClick={() => act("start")}><Icon name="play" /> {busy === "start" ? "Starting…" : "Start"}</button>
             )}
-            <button className="btn btn-amber" disabled={busy || running} onClick={doUpdate}><Icon name="download" /> {busy === "update" ? "Updating…" : "Update"}</button>
+            <button className="btn btn-amber" disabled={busy || running || world.status === "updating"} onClick={doUpdate}><Icon name="download" /> {busy === "update" || world.status === "updating" ? "Updating…" : "Update"}</button>
           </div>
         </div>
 

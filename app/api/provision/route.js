@@ -18,8 +18,8 @@ export async function POST(req) {
   }
 
   const world = prov.createProfile({ display_name, install_dir, ports, admin_password });
-  const jobId = prov.newJob();
-  // fire and forget — UI polls /api/provision/status
+  const jobId = prov.newJob(world.world_id, world.display_name);
+  // fire and forget — UI tracks progress via the downloads tray (/api/jobs)
   prov.provisionWorld(jobId, world.world_id);
   return NextResponse.json({ ok: true, world, jobId });
 }

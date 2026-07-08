@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { api, Icon, toast } from "@/components/ui";
 
 export default function CreateWorldModal({ onClose, onDone }) {
@@ -71,72 +71,51 @@ function PortGrid({ ports, setPorts }) {
 
 /* ---------- Install new (SteamCMD) ---------- */
 function NewInstall({ onBack, onClose, onDone }) {
-  const [step, setStep] = useState("form");
   const [name, setName] = useState("My Palworld World");
   const [dir, setDir] = useState("");
   const [ports, setPorts] = usePorts();
   const [password, setPassword] = useState("");
-  const [lines, setLines] = useState([]);
-  const [jobOk, setJobOk] = useState(null);
-  const logRef = useRef(null);
+  const [starting, setStarting] = useState(false);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
-
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [lines]);
 
   const pickDir = async () => {
     if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) setDir(p); }
     else toast("Type the full server folder path (native picker is in the desktop app).");
   };
 
+  // Start the install, then hand off to the global downloads tray so progress
+  // is visible everywhere (and the modal is never a trap).
   const start = async () => {
     if (!dir.trim()) return toast("Choose an install folder first", "error");
-    setStep("installing");
+    setStarting(true);
     try {
-      const r = await api("/api/provision", { method: "POST", body: { display_name: name, install_dir: dir.trim(), ports, admin_password: password || undefined } });
-      pollJob(r.jobId);
-    } catch (e) { toast(e.message, "error"); setStep("form"); }
-  };
-
-  const pollJob = (jobId) => {
-    const t = setInterval(async () => {
-      try {
-        const { job } = await api(`/api/provision/status?job=${jobId}`);
-        setLines(job.lines);
-        if (job.done) { clearInterval(t); setJobOk(job.ok); setStep("done"); }
-      } catch { clearInterval(t); }
-    }, 900);
+      await api("/api/provision", { method: "POST", body: { display_name: name, install_dir: dir.trim(), ports, admin_password: password || undefined } });
+      try { window.__palJobsPing?.(); } catch {}
+      toast("Install started — track progress in the downloads tray", "success");
+      onDone();
+    } catch (e) { toast(e.message, "error"); setStarting(false); }
   };
 
   return (
     <div>
-      <Header title="Install new server" onClose={onClose} onBack={step === "form" ? onBack : null} />
-      {step === "form" && (
-        <div style={{ display: "grid", gap: "0.9rem" }}>
-          <Field label="World name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-          <Field label="Install folder" hint="SteamCMD installs the dedicated server (app 2394010) here. Each world needs its own folder.">
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              <input className="input" value={dir} onChange={(e) => setDir(e.target.value)} placeholder={isElectron ? "Click Browse to choose a folder" : "e.g. C:\\PalworldServers\\world1"} />
-              <button className="btn btn-ghost" onClick={pickDir}><Icon name="folder" /> Browse</button>
-            </div>
-          </Field>
-          <PortGrid ports={ports} setPorts={setPorts} />
-          <Field label="Admin password" hint="Leave blank to auto-generate. Used for REST API + RCON auth.">
-            <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </Field>
-          <Actions>
-            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" onClick={start}><Icon name="download" /> Install server</button>
-          </Actions>
-        </div>
-      )}
-      {(step === "installing" || step === "done") && (
-        <div>
-          <div ref={logRef} className="console" style={{ height: 320, marginBottom: "1rem" }}>
-            {lines.length === 0 ? <div className="ln subtle">Preparing SteamCMD…</div> : lines.map((l, i) => <div key={i} className="ln">{l}</div>)}
+      <Header title="Install new server" onClose={onClose} onBack={onBack} />
+      <div style={{ display: "grid", gap: "0.9rem" }}>
+        <Field label="World name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label="Install folder" hint="SteamCMD installs the dedicated server (app 2394010) here. Each world needs its own folder.">
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <input className="input" value={dir} onChange={(e) => setDir(e.target.value)} placeholder={isElectron ? "Click Browse to choose a folder" : "e.g. C:\\PalworldServers\\world1"} />
+            <button className="btn btn-ghost" onClick={pickDir}><Icon name="folder" /> Browse</button>
           </div>
-          {step === "done" && <Actions><button className={`btn ${jobOk ? "btn-primary" : "btn-ghost"}`} onClick={onDone}>{jobOk ? "Done" : "Close"}</button></Actions>}
-        </div>
-      )}
+        </Field>
+        <PortGrid ports={ports} setPorts={setPorts} />
+        <Field label="Admin password" hint="Leave blank to auto-generate. Used for REST API + RCON auth.">
+          <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+        <Actions>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={start} disabled={starting}><Icon name="download" /> {starting ? "Starting…" : "Install server"}</button>
+        </Actions>
+      </div>
     </div>
   );
 }

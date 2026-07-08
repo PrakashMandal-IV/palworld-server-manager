@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { Icon, registerToast } from "@/components/ui";
+import DownloadTray from "@/components/DownloadTray";
 
 const NAV = [
   { href: "/", icon: "grid", label: "Worlds", match: (p) => p === "/" || p.startsWith("/worlds") },
@@ -130,6 +131,9 @@ export default function Shell({ children }) {
           {children}
         </div>
       </main>
+
+      {/* Global downloads / updates tray */}
+      <DownloadTray />
 
       {/* Toasts */}
       <div style={{ position: "fixed", right: 18, bottom: 18, display: "flex", flexDirection: "column", gap: 8, zIndex: 50 }}>
