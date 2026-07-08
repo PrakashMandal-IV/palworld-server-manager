@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const [s, setS] = useState(null);
   const [steam, setSteam] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     api("/api/settings").then((r) => setS(r.settings)).catch(() => {});
@@ -24,6 +25,15 @@ export default function SettingsPage() {
       toast("Saved", "success");
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
+  };
+
+  const sendTest = async () => {
+    setTesting(true);
+    try {
+      await api("/api/settings/test-notify", { method: "POST", body: { webhook: s.discordWebhook } });
+      toast("Test message sent — check your Discord channel", "success");
+    } catch (e) { toast(e.message, "error"); }
+    finally { setTesting(false); }
   };
 
   if (!s) return <div className="subtle" style={{ fontWeight: 700 }}>Loading…</div>;
@@ -48,6 +58,7 @@ export default function SettingsPage() {
         <label className="label">Webhook URL</label>
         <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
           <input className="input" value={s.discordWebhook || ""} onChange={(e) => setS({ ...s, discordWebhook: e.target.value })} placeholder="https://discord.com/api/webhooks/…" />
+          <button className="btn btn-ghost" onClick={sendTest} disabled={testing || !s.discordWebhook}>{testing ? "Sending…" : "Send test"}</button>
           <button className="btn btn-primary" onClick={() => save({ discordWebhook: s.discordWebhook })} disabled={saving}>Save</button>
         </div>
         <label className="label">Notify on</label>
