@@ -15,13 +15,19 @@ in clearly separated sections of the Mods tab:
 ```
 <install>/Pal/Binaries/Win64/
   dwmapi.dll                 UE4SS injector (its presence = "installed")
-  ue4ss/UE4SS-settings.ini   runtime config
-  Mods/
-    mods.txt                 load order + enable flags:  "ModName : 1"
-    <ModName>/
-      enabled.txt            optional: force-load regardless of mods.txt
-      Scripts/main.lua       the Lua mod entry point
+  ue4ss/
+    UE4SS-settings.ini       runtime config
+    Mods/                    <- UE4SS 3.0 mods location
+      mods.txt               load order + enable flags:  "ModName : 1"
+      <ModName>/
+        enabled.txt          optional: force-load regardless of mods.txt
+        Scripts/main.lua     the Lua mod entry point
 ```
+
+**Version note:** UE4SS 3.0 moved everything except `dwmapi.dll` under a `ue4ss/`
+subfolder, so Lua mods live in `Win64/ue4ss/Mods`. Older versions used `Win64/Mods`
+directly. The app resolves the correct folder automatically (`lib/ue4ss.js` →
+`modsDir`), preferring the `ue4ss/Mods` layout when the `ue4ss/` folder is present.
 
 **Critical:** `UE4SS-settings.ini` must have `GuiConsoleVisible=0` on a dedicated
 server. A visible console makes UE4SS try to open a window and the server crashes on
