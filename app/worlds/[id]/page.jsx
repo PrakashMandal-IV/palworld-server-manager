@@ -126,7 +126,7 @@ export default function WorldDetail() {
           <QuickStat label="Uptime" value={live?.metrics ? fmtUptime(live.metrics.uptime) : "—"} />
           <QuickStat label="In-game day" value={live?.metrics?.days ?? "—"} />
           <QuickStat label="Server FPS" value={live?.metrics?.serverfps ?? "—"} />
-          <QuickStat label="Build" value={world.build_id || "—"} />
+          <QuickStat label="Build" value={world.build_id || live?.info?.version || "—"} />
           <QuickStat label="Game port" value={world.game_port} />
         </div>
 

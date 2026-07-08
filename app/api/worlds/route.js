@@ -2,14 +2,29 @@ import { NextResponse } from "next/server";
 const dbm = require("@/lib/db");
 const rest = require("@/lib/restclient");
 const sup = require("@/lib/supervisor");
+const steam = require("@/lib/steamcmd");
 const { boot } = require("@/lib/bootstrap");
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// Back-fill a missing build id from the on-disk Steam manifest so worlds that
+// were adopted (or missed capture at install time) still show their build.
+function ensureBuildId(w) {
+  if (w.build_id) return w;
+  try {
+    const bid = steam.readInstalledBuildId(w.install_dir);
+    if (bid) {
+      dbm.updateWorld(w.world_id, { build_id: bid });
+      return { ...w, build_id: bid };
+    }
+  } catch {}
+  return w;
+}
+
 export async function GET() {
   boot();
-  const worlds = dbm.listWorlds();
+  const worlds = dbm.listWorlds().map(ensureBuildId);
   const enriched = await Promise.all(
     worlds.map(async (w) => {
       const running = sup.isRunning(w.world_id) || sup.pidAlive(w.process_id);

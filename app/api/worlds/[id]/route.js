@@ -4,13 +4,20 @@ const dbm = require("@/lib/db");
 const sup = require("@/lib/supervisor");
 const rest = require("@/lib/restclient");
 const ini = require("@/lib/ini");
+const steam = require("@/lib/steamcmd");
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(_req, { params }) {
-  const w = dbm.getWorld(params.id);
+  let w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
+  if (!w.build_id) {
+    try {
+      const bid = steam.readInstalledBuildId(w.install_dir);
+      if (bid) w = dbm.updateWorld(params.id, { build_id: bid });
+    } catch {}
+  }
   const running = sup.isRunning(w.world_id) || sup.pidAlive(w.process_id);
   let info = null, players = null, metrics = null, settings = null;
   if (running && w.rest_api_enabled) {
