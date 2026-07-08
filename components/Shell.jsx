@@ -16,6 +16,16 @@ export default function Shell({ children }) {
   const path = usePathname();
   const [toasts, setToasts] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [ver, setVer] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/app/version").then((r) => r.json()).then(setVer).catch(() => {});
+  }, []);
+
+  const openRelease = () => {
+    const url = ver?.releaseUrl;
+    if (url) { try { window.open(url, "_blank"); } catch {} }
+  };
 
   useEffect(() => {
     // restore collapse preference
@@ -71,24 +81,45 @@ export default function Shell({ children }) {
           ))}
         </div>
 
-        {/* footer: user + theme */}
+        {/* footer: app version / update + theme */}
         <div style={{ padding: "0.55rem", borderTop: "1px solid var(--line-strong)", flexShrink: 0 }}>
+          {!collapsed && ver?.updateAvailable && (
+            <button onClick={openRelease} title="Open the latest release to download"
+              style={{
+                width: "100%", marginBottom: "0.5rem", padding: "0.45rem 0.6rem", borderRadius: 8,
+                background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: "0.45rem", fontWeight: 700, fontSize: "0.78rem",
+              }}>
+              <Icon name="download" size={15} />
+              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                Update available — v{ver.latest}
+              </span>
+            </button>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", justifyContent: collapsed ? "center" : "space-between" }}>
             {!collapsed && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 999, background: "var(--accent)", display: "grid", placeItems: "center", color: "#fff", fontSize: "0.8rem", fontWeight: 800, flexShrink: 0 }}>P</div>
-                <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.8rem", whiteSpace: "nowrap" }}>Admin</div>
-                  <div className="subtle" style={{ fontSize: "0.66rem" }}>local</div>
+              <div style={{ lineHeight: 1.1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.78rem", whiteSpace: "nowrap" }}>
+                  Palworld Server Manager
+                </div>
+                <div className="subtle" style={{ fontSize: "0.68rem" }}>
+                  v{ver?.current || "—"}{ver && !ver.updateAvailable && ver.checked ? " · up to date" : ""}
                 </div>
               </div>
             )}
-            <button onClick={toggle} title="Toggle theme"
-              style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 7, borderRadius: 8, display: "grid", placeItems: "center", transition: "background 0.15s" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--line)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />
-            </button>
+            {collapsed && ver?.updateAvailable ? (
+              <button onClick={openRelease} title={`Update available — v${ver.latest}`}
+                style={{ background: "var(--accent)", border: "none", cursor: "pointer", color: "#fff", padding: 7, borderRadius: 8, display: "grid", placeItems: "center" }}>
+                <Icon name="download" size={18} />
+              </button>
+            ) : (
+              <button onClick={toggle} title="Toggle theme"
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 7, borderRadius: 8, display: "grid", placeItems: "center", transition: "background 0.15s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--line)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                <Icon name={theme === "dark" ? "sun" : "moon"} size={18} />
+              </button>
+            )}
           </div>
         </div>
       </aside>

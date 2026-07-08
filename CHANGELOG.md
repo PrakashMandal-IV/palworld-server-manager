@@ -6,6 +6,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [1.2.0] — 2026-07-09
 
 ### Added
+- **App version + update check in the sidebar.** The footer now shows the app
+  name and version (replacing the old "Admin / local" placeholder). The app checks
+  its GitHub releases and, when a newer version is published, shows an "Update
+  available" button that opens the latest release page to download the new build.
 - **Full UE4SS support** for Lua mods (the kind most Palworld mods on Nexus use),
   managed separately from Steam Workshop mods in the Mods tab:
   - Install UE4SS into a world from a user-provided release zip; the app extracts it

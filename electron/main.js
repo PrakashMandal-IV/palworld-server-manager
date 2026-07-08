@@ -60,6 +60,8 @@ function startNextServer() {
     HOSTNAME: "127.0.0.1",
     NODE_ENV: "production",
     PALWORLD_MANAGER_DATA_DIR: dataDir(),
+    // Expose the installed app version to the server so the UI can check for updates.
+    PALWORLD_APP_VERSION: app.getVersion(),
     // CRITICAL: make the Electron binary behave as plain Node for this child,
     // so it can run the Next standalone server.js.
     ELECTRON_RUN_AS_NODE: "1",
