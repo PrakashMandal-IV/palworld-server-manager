@@ -75,7 +75,8 @@ export default function Ue4ssPanel({ worldId, running }) {
       </div>
       <p className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem", marginTop: 0 }}>
         UE4SS runs Lua script mods (most Palworld mods on Nexus). This is separate from the
-        Steam Workshop system above. Mods install under <code>Pal\Binaries\Win64\Mods</code>.
+        Steam Workshop system above. Mods install under your server&apos;s UE4SS mods folder
+        (<code>Pal\Binaries\Win64\ue4ss\Mods</code> on UE4SS 3.0).
       </p>
 
       {!data.installed && (
@@ -84,6 +85,14 @@ export default function Ue4ssPanel({ worldId, running }) {
           <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 8px" }}>
             Download the UE4SS release zip (the dedicated-server build) from its official page, then install it here.
             The app extracts it into <code>Win64</code> and sets the dedicated-server-safe options for you.
+          </p>
+          <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 10px" }}>
+            Get UE4SS:{" "}
+            <a href="https://pwmodding.wiki/docs/users/ue4ss/installation-server" target="_blank" rel="noreferrer"
+              style={{ color: "var(--accent)", fontWeight: 700 }}>Palworld UE4SS install guide</a>
+            {" · "}
+            <a href="https://github.com/UE4SS-RE/RE-UE4SS/releases" target="_blank" rel="noreferrer"
+              style={{ color: "var(--accent)", fontWeight: 700 }}>UE4SS releases</a>
           </p>
           <button className="btn btn-primary" style={{ padding: "0.4rem 0.8rem" }} disabled={busy || running} onClick={installUe4ss}>
             <Icon name="upload" size={15} /> Install UE4SS (.zip)
