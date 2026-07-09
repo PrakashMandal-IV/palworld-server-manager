@@ -78,60 +78,35 @@ local function to_str(v)
     return tostring(v)
 end
 
--- Map the chat category enum to a readable channel name; best-effort.
-local function channel_name(cat)
-    local n = tonumber(cat)
-    local map = { [0] = "Global", [1] = "Local", [2] = "Guild", [3] = "Whisper" }
-    if n and map[n] then return map[n] end
-    return "Global"
-end
-
--- The same chat event can reach us through more than one hooked function; collapse
--- identical name+message within the same second so we don't double-log.
-local last_sig, last_t = nil, 0
-local function should_emit(name, text)
-    local sig = name .. "\1" .. text
-    local t = os.time()
-    if sig == last_sig and (t - last_t) < 2 then return false end
-    last_sig, last_t = sig, t
-    return true
-end
-
--- Extract sender/channel/message from an FPalChatMessage struct param (used by both
--- EnterChat_Receive and BroadcastChatMessage) and append it.
+-- Read an FPalChatMessage struct param and append it. Verified struct layout for this
+-- Palworld build (via UE4SS ForEachProperty dump):
+--   FPalChatMessage { EnumProperty Category; StrProperty Sender; StructProperty
+--     SenderPlayerUId; StrProperty Message; ArrayProperty ReceiverPlayerUIds;
+--     NameProperty MessageId; ArrayProperty MessageArgKeys/Values }
+--
+-- We read ONLY the two StrProperty fields (Sender, Message) with :ToString(). This is
+-- the exact set the known-working community chat mods read. Reading other members —
+-- notably the `Category` EnumProperty — hard-crashes the dedicated server here with a
+-- native access violation that pcall CANNOT catch, so we deliberately never touch them.
 local function on_chat(self, chat_message_param)
-    local ok = pcall(function()
+    local ok, err = pcall(function()
         if chat_message_param == nil then return end
         local msg = chat_message_param:get()
         if msg == nil then return end
         local text = to_str(msg.Message)
         if text == "" then return end
-        local name = to_str(msg.SenderName)
-        if name == "" then name = to_str(msg.SenderPlayerName) end
+        local name = to_str(msg.Sender)
         if name == "" then name = "Player" end
-        if not should_emit(name, text) then return end
-        append_line(name, channel_name(msg.Category), text)
+        append_line(name, "", text)
     end)
     if not ok then
-        -- swallow errors so a game update that changes the struct can't crash the server
+        -- Log (don't rethrow) so a struct change in a future build can't crash the server.
+        print("[PSMChatRelay] chat handler error: " .. tostring(err) .. "\n")
     end
 end
 
--- Register on the inbound player-chat path (proven to fire on dedicated servers — the
--- AdminCommands mod uses the same hook) and also on the outbound broadcast as a
--- fallback. RegisterHook may throw if a function name is absent on this build, so wrap
--- each one independently.
-local HOOKS = {
-    "/Script/Pal.PalPlayerState:EnterChat_Receive",
-    "/Script/Pal.PalGameStateInGame:BroadcastChatMessage",
-}
-local hooked = {}
-for _, fn in ipairs(HOOKS) do
-    local ok = pcall(RegisterHook, fn, on_chat)
-    if ok then hooked[#hooked + 1] = fn end
-end
+RegisterHook("/Script/Pal.PalGameStateInGame:BroadcastChatMessage", on_chat)
 
 -- Resolve the output path eagerly so any path problems surface in UE4SS.log at load.
 resolve_out_path()
-print(string.format("[PSMChatRelay] loaded — hooked %d chat function(s): %s\n",
-    #hooked, table.concat(hooked, ", ")))
+print("[PSMChatRelay] loaded — hooking BroadcastChatMessage\n")
