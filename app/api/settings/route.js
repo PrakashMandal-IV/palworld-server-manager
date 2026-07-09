@@ -4,7 +4,7 @@ const dbm = require("@/lib/db");
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const KEYS = ["theme", "discordWebhook", "notifyEvents", "backupRetention"];
+const KEYS = ["theme", "discordWebhook", "notifyEvents", "backupRetention", "discordRelayChat", "chatCaptureEnabled"];
 
 export async function GET() {
   const out = {};
@@ -24,5 +24,7 @@ function defaultFor(k) {
   if (k === "theme") return "dark";
   if (k === "backupRetention") return 10;
   if (k === "notifyEvents") return {};
+  if (k === "discordRelayChat") return false;
+  if (k === "chatCaptureEnabled") return true;
   return "";
 }

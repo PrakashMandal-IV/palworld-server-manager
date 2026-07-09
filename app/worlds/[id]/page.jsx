@@ -12,10 +12,12 @@ import SchedulePanel from "@/components/SchedulePanel";
 import ModsPanel from "@/components/ModsPanel";
 import Ue4ssPanel from "@/components/Ue4ssPanel";
 import AdminPanel from "@/components/AdminPanel";
+import ChatPanel from "@/components/ChatPanel";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "grid" },
   { id: "players", label: "Players", icon: "users" },
+  { id: "chat", label: "Chat", icon: "chat" },
   { id: "console", label: "Console", icon: "terminal" },
   { id: "settings", label: "Settings", icon: "settings" },
   { id: "backups", label: "Backups", icon: "download" },
@@ -149,6 +151,7 @@ export default function WorldDetail() {
       <div className="panel" style={{ padding: "1.3rem" }}>
         {tab === "overview" && <Overview world={world} live={live} events={events} sessions={sessions} onDelete={del} />}
         {tab === "players" && <PlayersPanel worldId={id} players={live?.players} onChange={load} />}
+        {tab === "chat" && <ChatPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "console" && <LogsPanel worldId={id} />}
         {tab === "settings" && <SettingsEditor worldId={id} running={running} />}
         {tab === "backups" && <BackupsPanel worldId={id} backups={backups} running={running} onChange={load} />}

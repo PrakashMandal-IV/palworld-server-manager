@@ -14,6 +14,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   sampled across each server's full process tree, so it reflects the real
   shipping binary the launcher spawns — not just the launcher process. The
   sampler stays idle while no world is running.
+- **In-game chat capture & Discord relay.** The **Chat** tab now shows live
+  in-game player chat while a world runs. Palworld never exposes chat to the
+  server console or REST API, so the app ships its own small UE4SS Lua mod
+  (PSMChatRelay) that you install into a world with one click; it captures chat
+  to a file the app tails in real time. Chat can optionally be relayed to a
+  Discord webhook for a Palworld→Discord feed. The mod installs into the folder
+  the running UE4SS build actually scans (`ue4ss\Mods` on UE4SS 3.x, `Mods` on
+  2.x) and reads only the chat fields that are safe to touch, so it won't crash
+  the dedicated server.
+- **Guided chat setup with a full off-switch.** If UE4SS isn't installed on a
+  world, the Chat tab links straight to the UE4SS installer; once UE4SS is
+  present it offers the one-click relay-mod install. A global **In-game chat
+  capture** toggle in Settings and a per-world **Remove chat mod** button let you
+  disable the feature entirely and take the mod off a server — an easy way to
+  back it out if a future Palworld update ever makes the mod misbehave.
 
 ## [1.3.0] — 2026-07-09
 

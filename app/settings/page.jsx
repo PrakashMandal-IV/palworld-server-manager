@@ -73,6 +73,32 @@ export default function SettingsPage() {
             );
           })}
         </div>
+
+        <label className="label" style={{ marginTop: "1rem" }}>In-game chat relay</label>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button className={`btn ${s.discordRelayChat ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+            onClick={() => save({ discordRelayChat: !s.discordRelayChat })} disabled={saving}>
+            {s.discordRelayChat ? "On" : "Off"}
+          </button>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
+            Relay captured in-game chat to Discord (needs the chat mod on each world).
+          </span>
+        </div>
+      </div>
+
+      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>In-game chat capture</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button className={`btn ${s.chatCaptureEnabled !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+            onClick={() => save({ chatCaptureEnabled: !(s.chatCaptureEnabled !== false) })} disabled={saving}>
+            {s.chatCaptureEnabled !== false ? "On" : "Off"}
+          </button>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
+            Capture in-game chat via the UE4SS relay mod. Turn this off to stop the app from
+            reading chat entirely. If a Palworld update ever makes the mod misbehave, also use
+            <b> Remove chat mod</b> on each world&apos;s Chat tab to take the mod off the server.
+          </span>
+        </div>
       </div>
 
       <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>

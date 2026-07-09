@@ -61,6 +61,14 @@ if (fs.existsSync(wasmSrc)) {
   console.warn("WARNING: node-sqlite3-wasm not found in node_modules — install it before packaging.");
 }
 
+// 5. bundle the first-party UE4SS chat-relay mod so the app can install it into a
+//    server at runtime. Copied to dist-standalone/psm-mods (resolved by the server).
+const modsSrc = path.join(root, "resources", "mods");
+if (fs.existsSync(modsSrc)) {
+  copyDir(modsSrc, path.join(out, "psm-mods"));
+  console.log("Bundled UE4SS mods: OK (psm-mods/)");
+}
+
 // sanity check
 const serverJs = path.join(out, "server.js");
 if (!fs.existsSync(serverJs)) {
