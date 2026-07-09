@@ -3,6 +3,18 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] — 2026-07-09
+
+### Added
+- **Usage section — live CPU & memory monitoring.** A new **Usage** entry in the
+  sidebar graphs real-time CPU and memory for every running world. View all
+  running worlds together (aggregate CPU/memory line charts over time plus
+  per-world comparison bars) or pick a single world from the scope selector to
+  drill into its own CPU and memory graphs with current and peak stats. Usage is
+  sampled across each server's full process tree, so it reflects the real
+  shipping binary the launcher spawns — not just the launcher process. The
+  sampler stays idle while no world is running.
+
 ## [1.3.0] — 2026-07-09
 
 ### Added
