@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import { Icon, registerToast } from "@/components/ui";
-import DownloadTray from "@/components/DownloadTray";
+import { useJobsPoll, summarize, ProgressBar } from "@/components/jobsClient";
 
 const NAV = [
   { href: "/", icon: "grid", label: "Worlds", match: (p) => p === "/" || p.startsWith("/worlds") },
@@ -18,6 +18,8 @@ export default function Shell({ children }) {
   const [toasts, setToasts] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
   const [ver, setVer] = useState(null);
+  const jobs = useJobsPoll();
+  const jobSummary = summarize(jobs);
 
   useEffect(() => {
     fetch("/api/app/version").then((r) => r.json()).then(setVer).catch(() => {});
@@ -80,6 +82,7 @@ export default function Shell({ children }) {
           {NAV.map((n) => (
             <NavItem key={n.href} {...n} active={n.match(path)} collapsed={collapsed} />
           ))}
+          <DownloadsNavItem active={path.startsWith("/downloads")} collapsed={collapsed} summary={jobSummary} />
         </div>
 
         {/* footer: app version / update + theme */}
@@ -132,9 +135,6 @@ export default function Shell({ children }) {
         </div>
       </main>
 
-      {/* Global downloads / updates tray */}
-      <DownloadTray />
-
       {/* Toasts */}
       <div style={{ position: "fixed", right: 18, bottom: 18, display: "flex", flexDirection: "column", gap: 8, zIndex: 50 }}>
         {toasts.map((t) => (
@@ -168,6 +168,47 @@ function NavItem({ href, icon, label, active, collapsed }) {
     >
       <Icon name={icon} size={20} />
       {!collapsed && <span style={{ whiteSpace: "nowrap" }}>{label}</span>}
+    </Link>
+  );
+}
+
+// Sidebar "Downloads" entry — a permanent nav item that shows a live count and
+// aggregate progress while installs/updates run, and links to the Downloads page.
+function DownloadsNavItem({ active, collapsed, summary }) {
+  const { activeCount, percent, anyError } = summary;
+  const busy = activeCount > 0;
+  const dotColor = anyError ? "var(--red)" : "var(--accent)";
+
+  return (
+    <Link href="/downloads" title={collapsed ? `Downloads${busy ? ` (${activeCount})` : ""}` : undefined}
+      style={{
+        display: "block", padding: collapsed ? "0.6rem" : "0.55rem 0.6rem", borderRadius: 8,
+        textDecoration: "none", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.9rem",
+        marginBottom: 3, marginTop: 2,
+        background: active ? "var(--accent)" : "transparent",
+        color: active ? "#fff" : "var(--ink-soft)",
+        transition: "background 0.15s, color 0.15s",
+      }}
+      onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "var(--card-2)"; e.currentTarget.style.color = "var(--ink)"; } }}
+      onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--ink-soft)"; } }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", justifyContent: collapsed ? "center" : "flex-start", position: "relative" }}>
+        <span style={{ position: "relative", display: "grid", placeItems: "center" }}>
+          <Icon name="download" size={20} />
+          {busy && (
+            <span className="animate-pulseDot" style={{ position: "absolute", top: -3, right: -4, width: 8, height: 8, borderRadius: 999, background: dotColor, border: "1.5px solid var(--sidebar)" }} />
+          )}
+        </span>
+        {!collapsed && <span style={{ whiteSpace: "nowrap", flex: 1 }}>Downloads</span>}
+        {!collapsed && busy && (
+          <span className="chip" style={{ background: active ? "rgba(255,255,255,0.2)" : "var(--card-2)", fontSize: "0.7rem", fontWeight: 800, padding: "0.05rem 0.4rem" }}>
+            {activeCount}
+          </span>
+        )}
+      </div>
+      {!collapsed && busy && (
+        <ProgressBar percent={percent} style={{ marginTop: "0.5rem", height: 5 }} />
+      )}
     </Link>
   );
 }
