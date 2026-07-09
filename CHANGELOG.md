@@ -3,6 +3,30 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-07-09
+
+### Added
+- **Global Downloads & updates center.** Installs and server updates no longer
+  live in a modal you can accidentally lose. A permanent **Downloads** entry in
+  the sidebar shows a live count and progress while work runs, and opens a full
+  Downloads page listing every active job — with per-job progress bars, phase
+  labels, and expandable SteamCMD logs — plus a history of completed and failed
+  runs. World updates are now tracked jobs too, so an update finally shows real
+  progress instead of a silent spinner.
+
+### Fixed
+- **SteamCMD "exited with code 7" no longer fails good installs.** SteamCMD very
+  often exits non-zero after a fully successful run (most often when it updates
+  itself mid-run and re-execs). Success is now judged by the install on disk
+  (the server binary plus a readable build id), with an automatic single retry
+  for the self-update case, instead of trusting the exit code alone.
+- **Progress bar no longer sticks at 100% mid-update.** SteamCMD reports the
+  bootstrapper self-update and the actual multi-GB server download in two
+  different formats; only the first was understood, so the bar froze at 100%
+  while the real download ran invisibly. Both formats are now parsed, the bar
+  resets between phases, and each phase is labelled (Updating SteamCMD →
+  Downloading server files → Verifying → Installing).
+
 ## [1.2.0] — 2026-07-09
 
 ### Added
