@@ -45,8 +45,13 @@ UE4SS Lua mod so it controls both ends of the pipe.
 
 A UE4SS Lua mod that registers a hook on
 `/Script/Pal.PalGameStateInGame:BroadcastChatMessage`, reads the sender, category and
-message, and appends one JSON object per line to `Pal/Saved/psm-chat.jsonl` (path
-resolved relative to the mod's working directory, `Pal/Binaries/Win64`).
+message, and appends one JSON object per line to `Pal/Saved/psm-chat.jsonl`.
+
+The output path is **baked in as an absolute path by the app's installer** rather than
+resolved relative to UE4SS's working directory. This matters because UE4SS's working
+directory differs between layouts (`Pal/Binaries/Win64/ue4ss` on 3.x, `Pal/Binaries/Win64`
+on 2.x); a hard-coded relative path silently wrote to the wrong folder. The mod still
+falls back to relative candidates for both layouts when installed by hand.
 
 Line format:
 
@@ -75,9 +80,12 @@ cross-chat feed. Reuses `lib/notify.post`.
 
 1. Install **UE4SS** (experimental Palworld build) into the server —
    `Pal/Binaries/Win64`.
-2. In the app, open the world → **Chat** tab → **Install chat relay mod** (copies
-   `PSMChatRelay` into `Pal/Binaries/Win64/Mods`).
-3. Restart the world. Player chat now appears in the Chat tab.
+2. In the app, open the world → **Chat** tab → **Install chat relay mod**. The installer
+   copies `PSMChatRelay` into the Mods folder this UE4SS build actually scans —
+   `Pal/Binaries/Win64/ue4ss/Mods` on UE4SS 3.x, or `Pal/Binaries/Win64/Mods` on 2.x.
+3. **Restart the world** (UE4SS loads mods only at startup). Player chat now appears in
+   the Chat tab. On load, UE4SS.log prints `[PSMChatRelay] loaded` and the mod creates
+   `Pal/Saved/psm-chat.jsonl`.
 4. (Optional) enable **Relay chat to Discord** in Settings with a webhook set.
 
 ## Limits / notes

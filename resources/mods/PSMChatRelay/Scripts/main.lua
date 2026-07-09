@@ -5,9 +5,42 @@
 -- which the Palworld Server Manager app tails to display chat and relay it to Discord.
 --
 -- Requires UE4SS (experimental Palworld build) in Pal/Binaries/Win64.
--- The Lua working directory is Pal/Binaries/Win64, so ../../Saved reaches Pal/Saved.
+--
+-- Output path: the app's installer rewrites the placeholder below with an absolute
+-- path to <install>/Pal/Saved/psm-chat.jsonl, so this works regardless of which
+-- directory UE4SS runs from. If the mod is installed by hand (placeholder left as-is)
+-- we fall back to relative candidates covering both known UE4SS layouts:
+--   * UE4SS 3.x  → working dir is Pal/Binaries/Win64/ue4ss  (3 levels up to Pal)
+--   * UE4SS 2.x  → working dir is Pal/Binaries/Win64         (2 levels up to Pal)
 
-local OUT_PATH = "../../Saved/psm-chat.jsonl"
+-- Candidate output paths, tried in order; first one that opens is cached.
+local CANDIDATES = {
+    [[__PSM_OUT_PATH__]],            -- absolute, rewritten by the app installer
+    "../../../Saved/psm-chat.jsonl", -- UE4SS 3.x layout (cwd = Win64/ue4ss)
+    "../../Saved/psm-chat.jsonl",    -- UE4SS 2.x layout (cwd = Win64)
+    "./psm-chat.jsonl",              -- last resort: next to UE4SS
+}
+
+local OUT_PATH = nil
+
+-- Resolve (and cache) the first candidate path we can actually open for append.
+local function resolve_out_path()
+    if OUT_PATH then return OUT_PATH end
+    for _, p in ipairs(CANDIDATES) do
+        -- Skip the templated placeholder if the installer didn't rewrite it.
+        -- The placeholder starts with "__"; no real absolute or relative path does.
+        if p:sub(1, 2) ~= "__" then
+            local f = io.open(p, "a")
+            if f then
+                f:close()
+                OUT_PATH = p
+                print(string.format("[PSMChatRelay] writing chat to: %s\n", p))
+                return OUT_PATH
+            end
+        end
+    end
+    return nil
+end
 
 -- Minimal JSON string escaping (quotes, backslashes, control chars).
 local function esc(s)
@@ -22,8 +55,13 @@ local function now_ms()
 end
 
 local function append_line(name, channel, message)
-    local ok, f = pcall(io.open, OUT_PATH, "a")
-    if not ok or not f then return end
+    local path = resolve_out_path()
+    if not path then return end
+    local ok, f = pcall(io.open, path, "a")
+    if not ok or not f then
+        OUT_PATH = nil -- drop the cache so we re-resolve next time
+        return
+    end
     local line = string.format(
         '{"name":"%s","channel":"%s","message":"%s","at":%d}\n',
         esc(name), esc(channel), esc(message), now_ms()
@@ -65,4 +103,6 @@ end
 
 RegisterHook("/Script/Pal.PalGameStateInGame:BroadcastChatMessage", on_chat)
 
-print("[PSMChatRelay] loaded — writing chat to Pal/Saved/psm-chat.jsonl\n")
+-- Resolve the output path eagerly so any path problems surface in UE4SS.log at load.
+resolve_out_path()
+print("[PSMChatRelay] loaded — hooking BroadcastChatMessage\n")
