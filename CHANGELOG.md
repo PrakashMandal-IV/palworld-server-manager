@@ -6,6 +6,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [1.5.0] — 2026-07-10
 
 ### Added
+- **Broadcast section.** A new **Broadcast** tab lets you message everyone on the
+  server: send an announcement immediately, or schedule messages for later. See
+  all pending scheduled broadcasts, edit or delete them, and they're removed
+  automatically once they fire. Delivery uses Palworld's on-screen server
+  broadcast (the red pre-shutdown countdown look is exclusive to actual shutdowns
+  and can't be triggered for a normal message).
 - **Pre-shutdown warning countdown.** Each world can now warn players in-game
   before a restart or update — scheduled *or* manual. Configure it in the
   **Schedule** tab: how many minutes ahead to start, how often to repeat, and a

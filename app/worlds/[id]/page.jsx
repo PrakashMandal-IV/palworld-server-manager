@@ -13,11 +13,13 @@ import ModsPanel from "@/components/ModsPanel";
 import Ue4ssPanel from "@/components/Ue4ssPanel";
 import AdminPanel from "@/components/AdminPanel";
 import ChatPanel from "@/components/ChatPanel";
+import BroadcastPanel from "@/components/BroadcastPanel";
 import DiscordPanel from "@/components/DiscordPanel";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "grid" },
   { id: "players", label: "Players", icon: "users" },
+  { id: "broadcast", label: "Broadcast", icon: "bell" },
   { id: "chat", label: "Chat", icon: "chat" },
   { id: "console", label: "Console", icon: "terminal" },
   { id: "settings", label: "Settings", icon: "settings" },
@@ -146,6 +148,7 @@ export default function WorldDetail() {
       <div className="panel" style={{ padding: "1.3rem" }}>
         {tab === "overview" && <Overview world={world} live={live} events={events} sessions={sessions} onDelete={() => setDeleting(true)} />}
         {tab === "players" && <PlayersPanel worldId={id} players={live?.players} onChange={load} />}
+        {tab === "broadcast" && <BroadcastPanel worldId={id} running={running} />}
         {tab === "chat" && <ChatPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "console" && <LogsPanel worldId={id} />}
         {tab === "settings" && <SettingsEditor worldId={id} world={world} running={running} onGoToAdmin={() => setTab("admin")} />}
