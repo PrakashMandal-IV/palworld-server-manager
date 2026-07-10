@@ -3,6 +3,20 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] — 2026-07-10
+
+### Fixed
+- **Chat messages no longer show up as "left" in Join/Leave history.** Typing an
+  in-game message used to write a bogus entry into the presence log, which the
+  history rendered as the player leaving. Chat is no longer recorded as a
+  presence event, and existing stray rows are filtered out — no reinstall needed.
+- **System join/leave broadcasts stay out of the chat feed.** Palworld's own
+  "player joined" notices travel through the chat hook with no sender and are
+  localized to the server's game language (often Japanese), so they showed up as
+  garbled chat and relayed to Discord. These sender-less broadcasts are now
+  dropped both in the app and in the PSMChatRelay mod, leaving only real player
+  chat. Join/leave is still tracked in the dedicated Join/Leave history.
+
 ## [1.4.0] — 2026-07-09
 
 ### Changed
