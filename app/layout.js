@@ -5,6 +5,9 @@ import Shell from "@/components/Shell";
 export const metadata = {
   title: "Palworld Server Manager",
   description: "Provision, run, monitor and update multiple Palworld dedicated server worlds.",
+  // Serve the favicon from public/icon.png. (Not via the app/icon.png convention,
+  // which would collide with public/icon.png for the /icon.png URL and 500.)
+  icons: { icon: "/icon.png" },
 };
 
 export default function RootLayout({ children }) {
