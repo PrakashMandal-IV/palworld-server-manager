@@ -8,9 +8,12 @@ export const runtime = "nodejs";
 
 // Keys the app manages itself — never surfaced to the editor, always re-applied
 // from the world record so the editor can't break the world's identity.
+// PublicIP and PublicPort are intentionally NOT managed here — they're the address
+// advertised to the community browser and are user-editable in Server Identity (so
+// a tunnel like playit.gg can be pointed to). Everything else stays app-controlled.
 const MANAGED = new Set([
-  "PublicPort", "RESTAPIPort", "RESTAPIEnabled", "RCONPort", "RCONEnabled",
-  "AdminPassword", "ServerPassword", "PublicIP",
+  "RESTAPIPort", "RESTAPIEnabled", "RCONPort", "RCONEnabled",
+  "AdminPassword", "ServerPassword",
 ]);
 
 export async function GET(_req, { params }) {
@@ -47,8 +50,8 @@ export async function POST(req, { params }) {
     merged[k] = v;
   }
 
-  // re-apply managed network/auth identity from the world record
-  merged.PublicPort = String(w.game_port);
+  // re-apply managed network/auth identity from the world record. PublicPort/
+  // PublicIP are deliberately left to whatever the editor set (see MANAGED above).
   merged.RESTAPIPort = String(w.rest_api_port);
   merged.RESTAPIEnabled = w.rest_api_enabled ? "True" : "False";
   merged.AdminPassword = `"${w.admin_password || ""}"`;

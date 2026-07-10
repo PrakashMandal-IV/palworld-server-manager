@@ -63,7 +63,7 @@ export async function PATCH(req, { params }) {
       build_id: info.buildId || null,
     });
     // re-apply this world's ports/password into the newly pointed install
-    try { ini.applyWorldNetworkSettings(info.installDir, rebased); } catch {}
+    try { ini.applyWorldNetworkSettings(info.installDir, rebased, { syncPublicPort: true }); } catch {}
     dbm.logEvent(params.id, "settings", `Install folder changed to ${info.installDir}`);
   }
 
@@ -80,9 +80,11 @@ export async function PATCH(req, { params }) {
     if (k in clean) clean[k] = Math.max(0, parseInt(clean[k], 10) || 0);
   }
   const updated = dbm.updateWorld(params.id, clean);
-  // if network fields changed and install exists, re-apply ini
+  // if network fields changed and install exists, re-apply ini. Only re-sync the
+  // advertised PublicPort when the game port itself changed, so a routine profile
+  // save doesn't overwrite a custom tunnel port set in Server Identity.
   if (fs.existsSync(updated.install_dir)) {
-    try { ini.applyWorldNetworkSettings(updated.install_dir, updated); } catch {}
+    try { ini.applyWorldNetworkSettings(updated.install_dir, updated, { syncPublicPort: "game_port" in clean }); } catch {}
   }
   return NextResponse.json({ ok: true, world: updated });
 }

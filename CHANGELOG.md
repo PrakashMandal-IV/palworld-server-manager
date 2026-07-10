@@ -27,6 +27,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   **Voice Chat** group (enable proximity voice chat and tune its full-volume /
   silence distances), plus *Ranch Pal work speed* and *Show builder on
   structures*.
+- **Public IP / port for tunnels.** Server Identity now has editable **Public IP**
+  and **Public port** fields — the address advertised in the community server
+  browser. Set them to your tunnel's public IP and port (e.g. playit.gg) so
+  friends, including console/PS5 players, can find and join a server that has no
+  real public IP. They default to auto-detect / the game port, and a routine
+  profile save no longer overwrites a custom tunnel port.
 
 ### Fixed
 - **Updating an adopted server no longer fails when SteamCMD is missing.** Worlds
