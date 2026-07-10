@@ -7,17 +7,25 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **Broadcast section.** A new **Broadcast** tab lets you message everyone on the
-  server: send an announcement immediately, or schedule messages for later. See
-  all pending scheduled broadcasts, edit or delete them, and they're removed
-  automatically once they fire. Delivery uses Palworld's on-screen server
-  broadcast (the red pre-shutdown countdown look is exclusive to actual shutdowns
-  and can't be triggered for a normal message).
+  server: send an announcement immediately, or schedule messages for later. Each
+  pending schedule shows a live **hh:mm:ss countdown** to when it fires; edit or
+  delete them, and they're removed automatically once they fire. Schedules persist
+  across app and system restarts, so one set for tomorrow still fires as long as the
+  app is open when the time comes. If the app was closed through the scheduled time,
+  the broadcast isn't fired late or lost — it's kept and flagged **Missed**, with
+  one-click **Send now** and **Reschedule** actions. For a true on-screen message, install the bundled
+  **PSMBroadcast** UE4SS mod from the tab — broadcasts then appear on every player's
+  screen via the game's on-screen server notice (BroadcastServerNotice). Without the
+  mod, delivery falls back to Palworld's REST announce, which shows in the chat feed. (The red pre-shutdown
+  countdown look is exclusive to actual shutdowns and can't be triggered for a
+  normal message.)
 - **Pre-shutdown warning countdown.** Each world can now warn players in-game
   before a restart or update — scheduled *or* manual. Configure it in the
   **Schedule** tab: how many minutes ahead to start, how often to repeat, and a
   custom message with `{minutes}` / `{seconds}` placeholders (e.g. *"The server
-  will restart in {minutes} minute(s)"*). The notices broadcast to everyone on the
-  server, then hand off to Palworld's native red shutdown countdown for the final
+  will restart in {minutes} minute(s)"*). The notices go to everyone on the server —
+  on-screen via the PSMBroadcast mod when it's installed, otherwise as a chat-feed
+  announce — then hand off to Palworld's native red shutdown countdown for the final
   minute. Manual restarts with a warning run in the background so the app stays
   responsive during the countdown.
 - **In-app INI editor with version history.** A **.ini Editor** button in the

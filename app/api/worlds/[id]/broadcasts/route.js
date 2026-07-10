@@ -3,14 +3,36 @@ const crypto = require("crypto");
 const dbm = require("@/lib/db");
 const rest = require("@/lib/restclient");
 const sup = require("@/lib/supervisor");
+const ue4ss = require("@/lib/ue4ss");
 const { ensureScheduler } = require("@/lib/scheduler");
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// List this world's pending scheduled broadcasts.
+// Deliver a message now: on-screen via the PSMBroadcast mod when installed, else the
+// REST announce (chat feed). Returns which path was used.
+async function deliverBroadcast(w, message) {
+  if (sup.broadcastModInstalled(w.install_dir)) {
+    sup.enqueueBroadcast(w.install_dir, message);
+    return "mod";
+  }
+  await rest.announce(w, message);
+  return "rest";
+}
+
+// List this world's pending scheduled broadcasts + on-screen-mod status for the UI.
 export async function GET(_req, { params }) {
-  return NextResponse.json({ ok: true, broadcasts: dbm.listBroadcasts(params.id) });
+  const w = dbm.getWorld(params.id);
+  const modInstalled = w ? sup.broadcastModInstalled(w.install_dir) : false;
+  let ue4ssInstalled = false;
+  try { ue4ssInstalled = w ? ue4ss.detect(w.install_dir).installed : false; } catch {}
+  return NextResponse.json({
+    ok: true,
+    broadcasts: dbm.listBroadcasts(params.id),
+    modInstalled,
+    ue4ssInstalled,
+    bundledAvailable: !!sup.bundledBroadcastModDir(),
+  });
 }
 
 // POST { message, immediate } -> send now
@@ -25,9 +47,11 @@ export async function POST(req, { params }) {
   if (body.immediate) {
     if (!sup.isRunning(params.id)) return NextResponse.json({ ok: false, error: "Start the world to broadcast." }, { status: 409 });
     try {
-      await rest.announce(w, message);
-      dbm.logEvent(params.id, "broadcast", `Sent broadcast: ${message}`);
-      return NextResponse.json({ ok: true, sent: true });
+      // Prefer the on-screen broadcast mod when it's installed; otherwise fall back to
+      // the REST announce (shows in the chat feed).
+      const via = await deliverBroadcast(w, message);
+      dbm.logEvent(params.id, "broadcast", `Sent broadcast (${via}): ${message}`);
+      return NextResponse.json({ ok: true, sent: true, via });
     } catch (e) {
       return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
     }
