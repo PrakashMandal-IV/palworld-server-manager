@@ -118,7 +118,8 @@ export default function IniEditor({ world, running, onClose }) {
               value={loading ? "Loading…" : content}
               onChange={(e) => setContent(e.target.value)}
               disabled={loading}
-              style={{ flex: 1, width: "100%", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.8rem", lineHeight: 1.5, whiteSpace: "pre", overflowWrap: "normal", overflow: "auto", resize: "none" }}
+              wrap="soft"
+              style={{ flex: 1, width: "100%", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.8rem", lineHeight: 1.5, whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word", overflowX: "hidden", overflowY: "auto", resize: "none" }}
             />
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
               <button className="btn btn-ghost" onClick={() => setContent(original)} disabled={!dirty || saving}>
@@ -161,8 +162,8 @@ export default function IniEditor({ world, running, onClose }) {
               <div className="heading" style={{ fontSize: "1rem" }}>Version #{preview.id}</div>
               <button className="btn btn-ghost" onClick={() => setPreview(null)}><Icon name="x" size={14} /> Close</button>
             </div>
-            <textarea className="input" readOnly value={preview.content}
-              style={{ flex: 1, minHeight: 360, fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.78rem", whiteSpace: "pre", overflowX: "auto" }} />
+            <textarea className="input" readOnly value={preview.content} wrap="soft"
+              style={{ flex: 1, minHeight: 360, fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.78rem", whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word", overflowX: "hidden" }} />
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
               <button className="btn btn-ghost" onClick={() => guard(() => { setContent(preview.content); setPreview(null); toast("Loaded into editor — Save to keep", "success"); })}>Load into editor</button>
               <button className="btn btn-amber" onClick={() => requestRestore(preview.id)}>Restore this version</button>
