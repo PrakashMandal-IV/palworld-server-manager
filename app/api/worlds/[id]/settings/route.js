@@ -52,7 +52,7 @@ export async function POST(req, { params }) {
   merged.RESTAPIPort = String(w.rest_api_port);
   merged.RESTAPIEnabled = w.rest_api_enabled ? "True" : "False";
   merged.AdminPassword = `"${w.admin_password || ""}"`;
-  if (merged.ServerPassword === undefined) merged.ServerPassword = '""';
+  merged.ServerPassword = `"${w.server_password || ""}"`;
   if (w.rcon_enabled) { merged.RCONPort = String(w.rcon_port); merged.RCONEnabled = "True"; }
   else merged.RCONEnabled = "False";
 

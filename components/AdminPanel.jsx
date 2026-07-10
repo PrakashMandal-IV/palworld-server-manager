@@ -6,6 +6,7 @@ export default function AdminPanel({ world, running, onChange }) {
   const [announce, setAnnounce] = useState("");
   const [name, setName] = useState(world.display_name);
   const [password, setPassword] = useState(world.admin_password);
+  const [serverPassword, setServerPassword] = useState(world.server_password || "");
   const [extraArgs, setExtraArgs] = useState(world.extra_args || "");
   const [autostart, setAutostart] = useState(!!world.autostart);
   const [crashGuard, setCrashGuard] = useState(!!world.crash_guard);
@@ -47,7 +48,7 @@ export default function AdminPanel({ world, running, onChange }) {
     try {
       await api(`/api/worlds/${world.world_id}`, {
         method: "PATCH",
-        body: { display_name: name, admin_password: password, extra_args: extraArgs, autostart: autostart ? 1 : 0, crash_guard: crashGuard ? 1 : 0, community_server: community ? 1 : 0 },
+        body: { display_name: name, admin_password: password, server_password: serverPassword, extra_args: extraArgs, autostart: autostart ? 1 : 0, crash_guard: crashGuard ? 1 : 0, community_server: community ? 1 : 0 },
       });
       toast("Profile saved", "success");
       onChange();
@@ -76,6 +77,14 @@ export default function AdminPanel({ world, running, onChange }) {
           <div>
             <label className="label">Admin password (REST API)</label>
             <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="label">Server password (players must enter to join)</label>
+            <input className="input" value={serverPassword} onChange={(e) => setServerPassword(e.target.value)} placeholder="Leave blank for an open server (anyone can join)" />
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.74rem", marginTop: 4 }}>
+              This is the in-game join password (Palworld&apos;s <code>ServerPassword</code>), separate from the admin password.
+              Blank = open server. Restart the world to apply.
+            </p>
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="label">Extra launch arguments</label>

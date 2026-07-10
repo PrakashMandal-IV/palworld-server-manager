@@ -7,6 +7,7 @@ import PlayersPanel from "@/components/PlayersPanel";
 import LogsPanel from "@/components/LogsPanel";
 import CustomizeModal from "@/components/CustomizeModal";
 import SettingsEditor from "@/components/SettingsEditor";
+import IniEditor from "@/components/IniEditor";
 import BackupsPanel from "@/components/BackupsPanel";
 import SchedulePanel from "@/components/SchedulePanel";
 import ModsPanel from "@/components/ModsPanel";
@@ -21,6 +22,7 @@ const TABS = [
   { id: "chat", label: "Chat", icon: "chat" },
   { id: "console", label: "Console", icon: "terminal" },
   { id: "settings", label: "Settings", icon: "settings" },
+  { id: "ini", label: "INI file", icon: "terminal" },
   { id: "backups", label: "Backups", icon: "download" },
   { id: "schedule", label: "Schedule", icon: "clock" },
   { id: "mods", label: "Mods", icon: "shield" },
@@ -149,8 +151,9 @@ export default function WorldDetail() {
         {tab === "chat" && <ChatPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "console" && <LogsPanel worldId={id} />}
         {tab === "settings" && <SettingsEditor worldId={id} running={running} />}
+        {tab === "ini" && <IniEditor world={world} running={running} />}
         {tab === "backups" && <BackupsPanel worldId={id} backups={backups} running={running} onChange={load} />}
-        {tab === "schedule" && <SchedulePanel worldId={id} schedules={schedules} onChange={load} />}
+        {tab === "schedule" && <SchedulePanel worldId={id} world={world} schedules={schedules} onChange={load} />}
         {tab === "mods" && (
           <div style={{ display: "grid", gap: "1.8rem" }}>
             <div>

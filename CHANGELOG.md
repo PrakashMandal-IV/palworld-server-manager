@@ -3,6 +3,37 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-07-10
+
+### Added
+- **Pre-shutdown warning countdown.** Each world can now warn players in-game
+  before a restart or update — scheduled *or* manual. Configure it in the
+  **Schedule** tab: how many minutes ahead to start, how often to repeat, and a
+  custom message with `{minutes}` / `{seconds}` placeholders (e.g. *"The server
+  will restart in {minutes} minute(s)"*). The notices broadcast to everyone on the
+  server, then hand off to Palworld's native red shutdown countdown for the final
+  minute. Manual restarts with a warning run in the background so the app stays
+  responsive during the countdown.
+- **In-app INI editor with version history.** A new **INI file** tab opens
+  `PalWorldSettings.ini` in a built-in editor so you can tweak raw settings
+  directly. Every save and restore snapshots the file, so you can view any past
+  version and roll back to it in one click. Edits are reflected in the Settings
+  form (both read the same file). The world header (name/status/path) stays
+  visible while you edit.
+- **Player join password.** You can now set a **Server password** in the Admin
+  tab — the password players type on Palworld's join screen (separate from the
+  admin password). Leave it blank for an open server.
+- **Palworld 1.0 settings.** Added the new 1.0 server options, including a
+  **Voice Chat** group (enable proximity voice chat and tune its full-volume /
+  silence distances), plus *Ranch Pal work speed* and *Show builder on
+  structures*.
+
+### Fixed
+- **Updating an adopted server no longer fails when SteamCMD is missing.** Worlds
+  added from an existing install never ran provisioning, so SteamCMD wasn't
+  present and updates errored out. Updates now install SteamCMD automatically
+  first if it isn't already there.
+
 ## [1.4.1] — 2026-07-10
 
 ### Fixed
