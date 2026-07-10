@@ -148,7 +148,7 @@ export default function WorldDetail() {
         {tab === "players" && <PlayersPanel worldId={id} players={live?.players} onChange={load} />}
         {tab === "chat" && <ChatPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "console" && <LogsPanel worldId={id} />}
-        {tab === "settings" && <SettingsEditor worldId={id} world={world} running={running} />}
+        {tab === "settings" && <SettingsEditor worldId={id} world={world} running={running} onGoToAdmin={() => setTab("admin")} />}
         {tab === "backups" && <BackupsPanel worldId={id} backups={backups} running={running} onChange={load} />}
         {tab === "schedule" && <SchedulePanel worldId={id} world={world} schedules={schedules} onChange={load} />}
         {tab === "mods" && (

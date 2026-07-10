@@ -31,7 +31,7 @@ function encode(type, val) {
   return String(val);
 }
 
-export default function SettingsEditor({ worldId, world, running }) {
+export default function SettingsEditor({ worldId, world, running, onGoToAdmin }) {
   const [iniOpen, setIniOpen] = useState(false);
   const [groups, setGroups] = useState(null);
   const [saved, setSaved] = useState({});      // typed values reflecting the ini on disk
@@ -181,6 +181,18 @@ export default function SettingsEditor({ worldId, world, running }) {
       {visibleGroups.map((g) => (
         <div key={g.title} style={{ marginBottom: filtering ? "1.4rem" : 0 }}>
           {filtering && <h4 className="heading" style={{ fontSize: "0.85rem", margin: "0 0 0.6rem", color: "var(--ink-soft)" }}>{g.title}</h4>}
+          {/* Public IP/port only matter once the server is publicly listed. Nudge the
+              user to turn that on — but only while it's still off. */}
+          {g.title === "Server Identity" && world && !world.community_server && (
+            <Notice color="var(--yellow)">
+              <Icon name="alert" size={14} /> Public IP/port only work once this server is listed. Turn on <b>Community server</b> in Admin.
+              {onGoToAdmin && (
+                <button className="btn btn-subtle" style={{ padding: "0.2rem 0.6rem", fontSize: "0.74rem", marginLeft: "auto" }} onClick={onGoToAdmin}>
+                  Go to Admin
+                </button>
+              )}
+            </Notice>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.9rem" }}>
             {g.fields.map((f) => {
               const isChanged = JSON.stringify(draft[f.key]) !== JSON.stringify(saved[f.key]);
