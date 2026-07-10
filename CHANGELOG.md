@@ -14,12 +14,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   server, then hand off to Palworld's native red shutdown countdown for the final
   minute. Manual restarts with a warning run in the background so the app stays
   responsive during the countdown.
-- **In-app INI editor with version history.** A new **INI file** tab opens
-  `PalWorldSettings.ini` in a built-in editor so you can tweak raw settings
-  directly. Every save and restore snapshots the file, so you can view any past
-  version and roll back to it in one click. Edits are reflected in the Settings
-  form (both read the same file). The world header (name/status/path) stays
-  visible while you edit.
+- **In-app INI editor with version history.** A **.ini Editor** button in the
+  Settings tab opens `PalWorldSettings.ini` in a full-screen editor so you can
+  tweak raw settings directly. Every save and restore snapshots the file, so you
+  can view any past version and roll back to it in one click. Closing or
+  restoring with unsaved edits prompts you to discard first, and edits are
+  reflected back into the Settings form (both read the same file).
 - **Player join password.** You can now set a **Server password** in the Admin
   tab — the password players type on Palworld's join screen (separate from the
   admin password). Leave it blank for an open server.

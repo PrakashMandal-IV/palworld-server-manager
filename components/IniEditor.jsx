@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api, Icon, fmtTime, fmtBytes, StatusChip, toast } from "@/components/ui";
 
-// Full-panel in-app editor for PalWorldSettings.ini with version history.
+// Full-screen modal editor for PalWorldSettings.ini with version history.
 // Every save/restore snapshots the file, so any change can be rolled back.
-export default function IniEditor({ world, running }) {
+// Guards unsaved edits when closing or restoring a version.
+export default function IniEditor({ world, running, onClose }) {
   const worldId = world.world_id;
   const [content, setContent] = useState("");
   const [original, setOriginal] = useState("");
@@ -13,7 +14,11 @@ export default function IniEditor({ world, running }) {
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState(null); // { id, content } being viewed
+  const [preview, setPreview] = useState(null);   // { id, content } being viewed
+  const [confirm, setConfirm] = useState(null);    // { message, onYes }
+  const downOnBackdrop = useRef(false);
+
+  const dirty = !loading && content !== original;
 
   const loadVersions = useCallback(async () => {
     try { const r = await api(`/api/worlds/${worldId}/ini/versions`); setVersions(r.versions || []); }
@@ -34,7 +39,20 @@ export default function IniEditor({ world, running }) {
 
   useEffect(() => { load(); loadVersions(); }, [load, loadVersions]);
 
-  const dirty = content !== original;
+  // Run `action` immediately, or ask to discard first when there are unsaved edits.
+  const guard = useCallback((action) => {
+    if (dirty) setConfirm({ message: "You have unsaved changes to the ini. Discard them?", onYes: () => { setConfirm(null); action(); } });
+    else action();
+  }, [dirty]);
+
+  const requestClose = useCallback(() => guard(onClose), [guard, onClose]);
+
+  // Esc closes (with the same unsaved guard).
+  useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") { if (preview) setPreview(null); else if (confirm) setConfirm(null); else requestClose(); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [requestClose, preview, confirm]);
 
   const save = async () => {
     setSaving(true);
@@ -52,8 +70,7 @@ export default function IniEditor({ world, running }) {
     catch (e) { toast(e.message, "error"); }
   };
 
-  const restore = async (vid) => {
-    if (!confirm("Restore this version? The current file is snapshotted first, so you can undo.")) return;
+  const doRestore = async (vid) => {
     try {
       const r = await api(`/api/worlds/${worldId}/ini/versions/${vid}/restore`, { method: "POST" });
       setContent(r.content); setOriginal(r.content); setPreview(null);
@@ -61,76 +78,84 @@ export default function IniEditor({ world, running }) {
       loadVersions();
     } catch (e) { toast(e.message, "error"); }
   };
+  // Restoring replaces the editor content, so guard unsaved edits first.
+  const requestRestore = (vid) => guard(() => doRestore(vid));
 
   return (
-    <div>
-      {/* Compact world header for this focused editor view */}
-      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", marginBottom: "0.9rem", flexWrap: "wrap" }}>
-        <Icon name="settings" size={18} />
-        <div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{world.display_name}</div>
-        <StatusChip status={world.status} running={running} />
-        <div className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", flex: 1, minWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {path}
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.62)", display: "grid", placeItems: "center", zIndex: 60, padding: "1.4rem" }}
+      onMouseDown={(e) => { downOnBackdrop.current = e.target === e.currentTarget; }}
+      onClick={(e) => { if (e.target === e.currentTarget && downOnBackdrop.current) requestClose(); }}
+    >
+      <div className="panel" style={{ width: "96vw", height: "92vh", maxWidth: 1400, display: "flex", flexDirection: "column", padding: "1.1rem", gap: "0.9rem" }}>
+        {/* Header: world name / status / path */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", flexWrap: "wrap" }}>
+          <Icon name="settings" size={18} />
+          <div style={{ fontWeight: 800, fontSize: "1.05rem" }}>{world.display_name}</div>
+          <StatusChip status={world.status} running={running} />
+          <div className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", flex: 1, minWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {path}
+          </div>
+          {dirty && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>Unsaved</span>}
+          <button className="btn btn-ghost" onClick={requestClose}><Icon name="x" size={14} /> Close</button>
         </div>
-      </div>
 
-      {running && (
-        <div className="panel-inset" style={{ padding: "0.6rem 0.9rem", marginBottom: "0.9rem", borderLeft: "3px solid var(--yellow)", fontSize: "0.78rem", fontWeight: 700 }}>
-          The world is running. Palworld rewrites this file on shutdown, so use the app&apos;s <b>Restart</b> to apply edits safely.
-        </div>
-      )}
-      {!exists && !loading && (
-        <p className="subtle" style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: 0 }}>
-          No saved ini yet — showing the shipped defaults. Saving will create the file.
-        </p>
-      )}
+        {running && (
+          <div className="panel-inset" style={{ padding: "0.5rem 0.9rem", borderLeft: "3px solid var(--yellow)", fontSize: "0.76rem", fontWeight: 700 }}>
+            The world is running. Palworld rewrites this file on shutdown — use the app&apos;s <b>Restart</b> to apply edits safely.
+          </div>
+        )}
+        {!exists && !loading && (
+          <div className="subtle" style={{ fontWeight: 700, fontSize: "0.78rem" }}>No saved ini yet — showing the shipped defaults. Saving will create the file.</div>
+        )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 260px", gap: "1rem", alignItems: "start" }}>
-        {/* Editor */}
-        <div>
-          <textarea
-            className="input"
-            spellCheck={false}
-            value={loading ? "Loading…" : content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={loading}
-            style={{ width: "100%", minHeight: 460, fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.8rem", lineHeight: 1.5, whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto", resize: "vertical" }}
-          />
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
-            <button className="btn btn-ghost" onClick={() => setContent(original)} disabled={!dirty || saving}>
-              <Icon name="restart" size={14} /> Revert
-            </button>
-            <button className="btn btn-primary" onClick={save} disabled={!dirty || saving || loading}>
-              <Icon name="download" /> {saving ? "Saving…" : "Save"}
-            </button>
+        {/* Body: editor + version history */}
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 280px", gap: "1rem", flex: 1, minHeight: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <textarea
+              className="input"
+              spellCheck={false}
+              value={loading ? "Loading…" : content}
+              onChange={(e) => setContent(e.target.value)}
+              disabled={loading}
+              style={{ flex: 1, width: "100%", fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.8rem", lineHeight: 1.5, whiteSpace: "pre", overflowWrap: "normal", overflow: "auto", resize: "none" }}
+            />
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
+              <button className="btn btn-ghost" onClick={() => setContent(original)} disabled={!dirty || saving}>
+                <Icon name="restart" size={14} /> Revert
+              </button>
+              <button className="btn btn-primary" onClick={save} disabled={!dirty || saving || loading}>
+                <Icon name="download" /> {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+
+          <div className="panel-inset" style={{ padding: "0.8rem", display: "flex", flexDirection: "column", minHeight: 0 }}>
+            <div className="heading" style={{ fontSize: "0.9rem", marginBottom: "0.6rem" }}>Version history</div>
+            {versions.length === 0 ? (
+              <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem" }}>No versions yet. Saving creates restore points.</p>
+            ) : (
+              <div style={{ display: "grid", gap: "0.4rem", overflowY: "auto" }}>
+                {versions.map((v) => (
+                  <div key={v.id} style={{ padding: "0.45rem 0.55rem", border: "1px solid var(--line)", borderRadius: 8 }}>
+                    <div style={{ fontWeight: 800, fontSize: "0.74rem" }}>{v.note || "snapshot"}</div>
+                    <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 700 }}>{fmtTime(v.created_at)} · {fmtBytes(v.size)}</div>
+                    <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
+                      <button className="btn btn-ghost" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => viewVersion(v.id)}>View</button>
+                      <button className="btn btn-amber" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => requestRestore(v.id)}>Restore</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Version history */}
-        <div className="panel-inset" style={{ padding: "0.8rem" }}>
-          <div className="heading" style={{ fontSize: "0.9rem", marginBottom: "0.6rem" }}>Version history</div>
-          {versions.length === 0 ? (
-            <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem" }}>No versions yet. Saving creates restore points.</p>
-          ) : (
-            <div style={{ display: "grid", gap: "0.4rem", maxHeight: 420, overflowY: "auto" }}>
-              {versions.map((v) => (
-                <div key={v.id} style={{ padding: "0.45rem 0.55rem", border: "1px solid var(--line)", borderRadius: 8 }}>
-                  <div style={{ fontWeight: 800, fontSize: "0.74rem" }}>{v.note || "snapshot"}</div>
-                  <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 700 }}>{fmtTime(v.created_at)} · {fmtBytes(v.size)}</div>
-                  <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
-                    <button className="btn btn-ghost" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => viewVersion(v.id)}>View</button>
-                    <button className="btn btn-amber" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => restore(v.id)}>Restore</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
+      {/* View a historical version */}
       {preview && (
-        <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setPreview(null); }}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 50, padding: "2rem" }}>
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget) setPreview(null); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 70, padding: "2rem" }}>
           <div className="panel" style={{ width: "min(820px, 96vw)", maxHeight: "86vh", display: "flex", flexDirection: "column", padding: "1.1rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.7rem" }}>
               <div className="heading" style={{ fontSize: "1rem" }}>Version #{preview.id}</div>
@@ -139,8 +164,23 @@ export default function IniEditor({ world, running }) {
             <textarea className="input" readOnly value={preview.content}
               style={{ flex: 1, minHeight: 360, fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.78rem", whiteSpace: "pre", overflowX: "auto" }} />
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
-              <button className="btn btn-ghost" onClick={() => { setContent(preview.content); setPreview(null); toast("Loaded into editor — Save to keep", "success"); }}>Load into editor</button>
-              <button className="btn btn-amber" onClick={() => restore(preview.id)}>Restore this version</button>
+              <button className="btn btn-ghost" onClick={() => guard(() => { setContent(preview.content); setPreview(null); toast("Loaded into editor — Save to keep", "success"); })}>Load into editor</button>
+              <button className="btn btn-amber" onClick={() => requestRestore(preview.id)}>Restore this version</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discard-changes confirmation */}
+      {confirm && (
+        <div onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirm(null); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 80, padding: "2rem" }}>
+          <div className="panel" style={{ width: "min(420px, 94vw)", padding: "1.2rem" }}>
+            <div className="heading" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>Unsaved changes</div>
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.84rem", marginTop: 0 }}>{confirm.message}</p>
+            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "1rem" }}>
+              <button className="btn btn-ghost" onClick={() => setConfirm(null)}>Keep editing</button>
+              <button className="btn btn-danger" onClick={confirm.onYes}>Discard changes</button>
             </div>
           </div>
         </div>

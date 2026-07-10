@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { api, Icon, toast } from "@/components/ui";
+import IniEditor from "@/components/IniEditor";
 
 // Community-tested starting presets (from published Palworld tuning guides).
 // Applying one just stages the changes in the editor; you still review + save.
@@ -30,7 +31,8 @@ function encode(type, val) {
   return String(val);
 }
 
-export default function SettingsEditor({ worldId, running }) {
+export default function SettingsEditor({ worldId, world, running }) {
+  const [iniOpen, setIniOpen] = useState(false);
   const [groups, setGroups] = useState(null);
   const [saved, setSaved] = useState({});      // typed values reflecting the ini on disk
   const [present, setPresent] = useState(new Set()); // keys actually written in the ini
@@ -239,8 +241,21 @@ export default function SettingsEditor({ worldId, running }) {
           <button className="btn btn-primary" onClick={save} disabled={saving || changedKeys.length === 0}>
             <Icon name="download" /> {saving ? "Saving…" : "Save changes"}
           </button>
+          {world && (
+            <button className="btn btn-subtle" onClick={() => setIniOpen(true)} title="Edit the raw PalWorldSettings.ini with version history">
+              <Icon name="terminal" size={14} /> .ini Editor
+            </button>
+          )}
         </div>
       </div>
+
+      {iniOpen && world && (
+        <IniEditor
+          world={world}
+          running={running}
+          onClose={() => { setIniOpen(false); load().catch(() => {}); }}
+        />
+      )}
     </div>
   );
 }
