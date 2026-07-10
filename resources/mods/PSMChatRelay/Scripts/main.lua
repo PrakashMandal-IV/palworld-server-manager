@@ -96,7 +96,11 @@ local function on_chat(self, chat_message_param)
         local text = to_str(msg.Message)
         if text == "" then return end
         local name = to_str(msg.Sender)
-        if name == "" then name = "Player" end
+        -- System/server broadcasts (join/leave notices, admin announcements) come
+        -- through this same hook with no Sender. They're localized by the game (often
+        -- Japanese) and the app already tracks join/leave separately, so skip them —
+        -- only relay real player chat, which always has a sender.
+        if name == "" then return end
         append_line(name, "", text)
     end)
     if not ok then
