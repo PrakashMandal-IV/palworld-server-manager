@@ -33,6 +33,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   added from an existing install never ran provisioning, so SteamCMD wasn't
   present and updates errored out. Updates now install SteamCMD automatically
   first if it isn't already there.
+- **App logo/favicon no longer breaks.** Two copies of the icon both claimed the
+  `/icon.png` URL, which made the sidebar logo and favicon fail to load. Resolved
+  the collision so the icon shows reliably.
 
 ## [1.4.1] — 2026-07-10
 
