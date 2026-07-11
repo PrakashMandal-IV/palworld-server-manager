@@ -1,11 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api, Icon, fmtBytes, fmtTime, toast } from "@/components/ui";
 
 export default function BackupsPanel({ worldId, backups, running, onChange }) {
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [loc, setLoc] = useState(null);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
+
+  useEffect(() => {
+    api(`/api/settings/backup-dir?worldId=${encodeURIComponent(worldId)}`).then((r) => setLoc(r.backup)).catch(() => {});
+  }, [worldId]);
+
+  const openFolder = () => { if (isElectron && loc?.worldPath) window.desktop.openPath(loc.worldPath); };
 
   const create = async () => {
     setBusy(true);
@@ -52,7 +59,18 @@ export default function BackupsPanel({ worldId, backups, running, onChange }) {
         <button className="btn btn-ghost" onClick={importSave} disabled={importing || running}>
           <Icon name="upload" /> {importing ? "Importing…" : "Import save (.zip)"}
         </button>
+        {isElectron && loc?.worldPath && (
+          <button className="btn btn-ghost" onClick={openFolder} title={loc.worldPath}>
+            <Icon name="folder" /> Open backup folder
+          </button>
+        )}
       </div>
+
+      {loc && (
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", margin: "-0.4rem 0 1rem", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}>
+          {loc.worldPath}
+        </p>
+      )}
 
       {backups.length === 0 ? (
         <p className="subtle" style={{ fontWeight: 700 }}>No backups yet. Backups zip this world&apos;s Saved folder and rotate automatically.</p>

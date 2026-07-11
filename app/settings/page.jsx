@@ -9,11 +9,32 @@ export default function SettingsPage() {
   const [s, setS] = useState(null);
   const [steam, setSteam] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [backupLoc, setBackupLoc] = useState(null);
+  const [backupPath, setBackupPath] = useState("");
+  const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
 
   useEffect(() => {
     api("/api/settings").then((r) => setS(r.settings)).catch(() => {});
     api("/api/steamcmd").then(setSteam).catch(() => {});
+    api("/api/settings/backup-dir").then((r) => { setBackupLoc(r.backup); setBackupPath(r.backup.custom ? r.backup.path : ""); }).catch(() => {});
   }, []);
+
+  const saveBackupDir = async (p) => {
+    setSaving(true);
+    try {
+      const r = await api("/api/settings/backup-dir", { method: "POST", body: { path: p } });
+      setBackupLoc(r.backup);
+      setBackupPath(r.backup.custom ? r.backup.path : "");
+      toast(r.backup.custom ? "Backup location updated" : "Reset to default location", "success");
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSaving(false); }
+  };
+
+  const pickBackupDir = async () => {
+    if (!isElectron) return;
+    const p = await window.desktop.pickDirectory();
+    if (p) setBackupPath(p);
+  };
 
   const save = async (patch) => {
     setSaving(true);
@@ -77,6 +98,32 @@ export default function SettingsPage() {
           <input className="input" type="number" min="1" value={s.backupRetention ?? 10} onChange={(e) => setS({ ...s, backupRetention: Number(e.target.value) })} />
           <button className="btn btn-primary" onClick={() => save({ backupRetention: s.backupRetention })} disabled={saving}>Save</button>
         </div>
+
+        {backupLoc && (
+          <div style={{ marginTop: "1.1rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
+            <label className="label">Backup location</label>
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 0.5rem" }}>
+              Backups are ZIP snapshots of each world&apos;s <b>Saved</b> folder, stored outside the server
+              so a game update can&apos;t touch them. Currently saving to{" "}
+              <span style={{ fontWeight: 800 }}>{backupLoc.custom ? "a custom folder" : "the default folder"}</span>:
+            </p>
+            <p className="subtle" style={{ fontFamily: "var(--font-mono)", fontSize: "0.74rem", margin: "0 0 0.6rem", wordBreak: "break-all" }}>{backupLoc.path}</p>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder="Leave blank for the default location"
+                value={backupPath} onChange={(e) => setBackupPath(e.target.value)} />
+              {isElectron && (
+                <button className="btn btn-ghost" onClick={pickBackupDir} disabled={saving}><Icon name="folder" size={15} /> Choose folder</button>
+              )}
+              <button className="btn btn-primary" onClick={() => saveBackupDir(backupPath)} disabled={saving}>Save</button>
+              {backupLoc.custom && (
+                <button className="btn btn-ghost" onClick={() => saveBackupDir("")} disabled={saving}>Reset</button>
+              )}
+            </div>
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", margin: "0.5rem 0 0" }}>
+              Existing backups stay where they are — only new backups go to the new folder.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="panel" style={{ padding: "1.3rem" }}>

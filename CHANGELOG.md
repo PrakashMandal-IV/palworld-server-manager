@@ -15,6 +15,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **Workshop ID help.** An **info** button next to *Add* opens a short guide: how to
   find a mod's Workshop ID (the number in its Steam URL), that the mod must be
   subscribed/downloaded in Steam first, and to use *Import mod (.zip)* otherwise.
+- **Choose where backups are stored.** Settings → Backups now shows the exact folder
+  backups are written to and lets you point them at any drive/folder (with a picker),
+  or reset to the default. Existing backups stay put; only new ones use the new
+  location. A world's **Backups** tab shows that world's backup folder and an **Open
+  backup folder** button, so it's easy to find your saved snapshots. (Backups are ZIP
+  copies of each world's *Saved* folder, kept outside the server install where a game
+  update can't touch them.)
 
 ### Fixed
 - **Workshop server mods are now correctly detected.** A mod's `Info.json`
