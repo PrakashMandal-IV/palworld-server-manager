@@ -6,6 +6,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [2.0.1] — 2026-07-12
 
 ### Fixed
+- **The manager no longer becomes unresponsive after a long session.** After the app
+  had been running for an extended period, every action could start failing with
+  "Request failed (500)" repeating every few seconds, with no button working until
+  the app was force-closed. The packaged app's WASM SQLite backend keeps each
+  prepared statement in memory until it is explicitly finalized, but the database
+  layer created a fresh statement on every query and never released it — so routine
+  background polling leaked statements until the database ran out of memory and every
+  request failed. Prepared statements are now cached and reused for the life of the
+  connection (and finalized on shutdown), keeping memory flat no matter how long the
+  app runs. Your worlds and save data were never at risk from this — it only affected
+  the manager's own bookkeeping database.
 - **The connect address now shows your real network IP, not just `127.0.0.1`.** The
   Overview showed only `127.0.0.1:<port>`, which works *only* from the PC running the
   server — leading some to think the app forced the server to bind to loopback. It
