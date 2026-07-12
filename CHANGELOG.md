@@ -6,6 +6,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [2.0.1] — 2026-07-12
 
 ### Fixed
+- **Backups and crashes now actually post to Discord.** The Discord tab's *Notify
+  on* list offered **backup** and **crash** toggles, but nothing was ever sent for
+  those two events — creating a backup and a server crash both posted nothing, while
+  start/stop/restart/update worked. Both are now wired up: manual and scheduled
+  backups post a message (internal safety snapshots taken right before a
+  restart/update/restore stay silent so they don't spam the channel), and an
+  unexpected server exit posts a crash notice. Both still respect their *Notify on*
+  toggles.
 - **The manager no longer becomes unresponsive after a long session.** After the app
   had been running for an extended period, every action could start failing with
   "Request failed (500)" repeating every few seconds, with no button working until
