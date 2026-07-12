@@ -12,8 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   e.g. a **Status** channel for start/stop/restart/crash/update, a separate **Backup**
   channel, and a **Chat** channel for the in-game chat relay. Each event has a
   drop-down to pick its channel (or *Don't send* to mute it), and every channel has
-  its own **Test** button. Existing single-webhook setups are carried over unchanged —
-  they appear as one "Default" channel with everything routed to it.
+  its own **Test** button. Upgrading is seamless: if you were already using the single
+  Discord webhook, it's migrated to one channel named **Default Channel** with every
+  event routed to it (and chat only if you had the relay on), so your notifications
+  keep working with no reconfiguration. Worlds with no webhook are left untouched.
 
 ### Fixed
 - **Backups and crashes now actually post to Discord.** The Discord tab's *Notify
