@@ -1,53 +1,72 @@
 "use client";
 import { useMemo, useState } from "react";
 import { api, Icon, toast } from "@/components/ui";
+import { normalizeDiscord, ROUTE_KINDS, MAX_HOOKS } from "@/lib/discord-routing";
 
-const EVENT_KINDS = ["start", "stop", "restart", "crash", "backup", "update"];
+const KIND_LABELS = {
+  start: "Server started",
+  stop: "Server stopped",
+  restart: "Server restarted",
+  crash: "Server crashed",
+  backup: "Backup created",
+  update: "Server updated",
+  chat: "In-game chat relay",
+};
 
-function parseNotifyEvents(raw) {
-  if (!raw) return {};
-  if (typeof raw === "object") return raw;
-  try { return JSON.parse(raw) || {}; } catch { return {}; }
-}
+const newId = () => `h_${Math.random().toString(36).slice(2, 9)}`;
 
 export default function DiscordPanel({ world, onChange }) {
-  const initial = useMemo(() => ({
-    webhook: (world.discord_webhook || "").trim(),
-    events: parseNotifyEvents(world.notify_events),
-    relay: !!world.discord_relay_chat,
-  }), [world.discord_webhook, world.notify_events, world.discord_relay_chat]);
+  const initial = useMemo(
+    () => normalizeDiscord(world),
+    [world.discord_webhooks, world.discord_webhook, world.notify_events, world.discord_relay_chat]
+  );
 
-  const [webhook, setWebhook] = useState(initial.webhook);
-  const [events, setEvents] = useState(initial.events);
-  const [relay, setRelay] = useState(initial.relay);
-  const [testing, setTesting] = useState(false);
+  const [hooks, setHooks] = useState(initial.hooks);
+  const [routes, setRoutes] = useState(initial.routes);
   const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState(null);
 
-  const on = (k) => events[k] !== false;
-  const eventsDirty = EVENT_KINDS.some((k) => on(k) !== (initial.events[k] !== false));
-  const dirty = webhook.trim() !== initial.webhook || relay !== initial.relay || eventsDirty;
+  const dirty = JSON.stringify({ hooks, routes }) !== JSON.stringify(initial);
 
-  const discard = () => {
-    setWebhook(initial.webhook);
-    setEvents(initial.events);
-    setRelay(initial.relay);
+  const addHook = () => {
+    if (hooks.length >= MAX_HOOKS) return;
+    setHooks((hs) => [...hs, { id: newId(), name: `Channel ${hs.length + 1}`, url: "" }]);
   };
+  const patchHook = (id, patch) => setHooks((hs) => hs.map((h) => (h.id === id ? { ...h, ...patch } : h)));
+  const removeHook = (id) => {
+    setHooks((hs) => hs.filter((h) => h.id !== id));
+    setRoutes((rs) => {
+      const next = { ...rs };
+      for (const k of ROUTE_KINDS) if (next[k] === id) next[k] = "";
+      return next;
+    });
+  };
+  const setRoute = (kind, hookId) => setRoutes((rs) => ({ ...rs, [kind]: hookId }));
 
-  const sendTest = async () => {
-    setTesting(true);
+  const discard = () => { setHooks(initial.hooks); setRoutes(initial.routes); };
+
+  const sendTest = async (hook) => {
+    setTestingId(hook.id);
     try {
-      await api("/api/settings/test-notify", { method: "POST", body: { webhook: webhook.trim() } });
-      toast("Test message sent — check your Discord channel", "success");
+      await api("/api/settings/test-notify", { method: "POST", body: { webhook: hook.url.trim() } });
+      toast("Test message sent — check that Discord channel", "success");
     } catch (e) { toast(e.message, "error"); }
-    finally { setTesting(false); }
+    finally { setTestingId(null); }
   };
 
   const save = async () => {
     setSaving(true);
     try {
+      // Trim, and drop empty channels nothing routes to; clear routes to dropped ones.
+      const cleanedHooks = hooks
+        .map((h) => ({ id: h.id, name: h.name.trim() || "Webhook", url: h.url.trim() }))
+        .filter((h) => h.url || ROUTE_KINDS.some((k) => routes[k] === h.id));
+      const validIds = new Set(cleanedHooks.map((h) => h.id));
+      const cleanedRoutes = {};
+      for (const k of ROUTE_KINDS) cleanedRoutes[k] = validIds.has(routes[k]) ? routes[k] : "";
       await api(`/api/worlds/${world.world_id}`, {
         method: "PATCH",
-        body: { discord_webhook: webhook.trim(), notify_events: events, discord_relay_chat: relay ? 1 : 0 },
+        body: { discord_webhooks: { hooks: cleanedHooks, routes: cleanedRoutes } },
       });
       toast("Discord settings saved", "success");
       onChange?.();
@@ -55,47 +74,91 @@ export default function DiscordPanel({ world, onChange }) {
     finally { setSaving(false); }
   };
 
+  const hookById = (id) => hooks.find((h) => h.id === id);
+
   return (
     <div style={{ display: "grid", gap: "1.4rem" }}>
       <section>
         <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>Discord notifications</h3>
-        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.82rem", marginTop: 0, marginBottom: "0.8rem" }}>
-          This world&apos;s own Discord webhook — each world posts to its own channel. Leave the
-          webhook blank to disable notifications for this world.
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.82rem", marginTop: 0, marginBottom: "0.9rem" }}>
+          Add one or more Discord webhook channels for this world, then choose which channel each
+          event posts to below — e.g. a <b>Status</b> channel for start/stop/crash, a separate
+          <b> Backup</b> channel, and a <b>Chat</b> channel for the in-game relay.
         </p>
 
-        <label className="label">Webhook URL</label>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.1rem", flexWrap: "wrap" }}>
-          <input className="input" style={{ flex: 1, minWidth: 260 }} value={webhook}
-            onChange={(e) => setWebhook(e.target.value)} placeholder="https://discord.com/api/webhooks/…" />
-          <button className="btn btn-ghost" onClick={sendTest} disabled={testing || !webhook.trim()}>
-            {testing ? "Sending…" : "Send test"}
-          </button>
-        </div>
-
-        <label className="label">Notify on</label>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {EVENT_KINDS.map((k) => (
-            <button key={k} className={`btn ${on(k) ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
-              onClick={() => setEvents((prev) => ({ ...prev, [k]: !(prev[k] !== false) }))}>
-              {k}
-            </button>
+        {/* ---- Webhook channels ---- */}
+        <label className="label">Webhook channels</label>
+        <div style={{ display: "grid", gap: "0.6rem" }}>
+          {hooks.length === 0 && (
+            <div className="panel-inset" style={{ padding: "0.9rem 1.1rem" }}>
+              <span className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem" }}>
+                No channels yet. Add one to start posting notifications.
+              </span>
+            </div>
+          )}
+          {hooks.map((h) => (
+            <div key={h.id} className="panel-inset" style={{ padding: "0.7rem 0.9rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+              <input
+                className="input" value={h.name} onChange={(e) => patchHook(h.id, { name: e.target.value })}
+                placeholder="Channel name" style={{ width: 150 }} aria-label="Channel name" />
+              <input
+                className="input" value={h.url} onChange={(e) => patchHook(h.id, { url: e.target.value })}
+                placeholder="https://discord.com/api/webhooks/…" style={{ flex: 1, minWidth: 240 }} aria-label="Webhook URL" />
+              <button className="btn btn-ghost" style={{ padding: "0.4rem 0.7rem" }}
+                onClick={() => sendTest(h)} disabled={testingId === h.id || !h.url.trim()}>
+                {testingId === h.id ? "Sending…" : "Test"}
+              </button>
+              <button className="btn btn-danger" style={{ padding: "0.4rem 0.55rem" }}
+                onClick={() => removeHook(h.id)} title="Remove channel" aria-label="Remove channel">
+                <Icon name="trash" size={14} />
+              </button>
+            </div>
           ))}
         </div>
+        <button className="btn btn-ghost" style={{ marginTop: "0.6rem", padding: "0.4rem 0.8rem" }}
+          onClick={addHook} disabled={hooks.length >= MAX_HOOKS}>
+          <Icon name="plus" size={15} /> Add channel
+        </button>
+        {hooks.length >= MAX_HOOKS && (
+          <span className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", marginLeft: 8 }}>Maximum of {MAX_HOOKS} channels.</span>
+        )}
+      </section>
 
-        <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", marginTop: "1.1rem", borderLeft: `3px solid ${relay ? "var(--green-bright)" : "var(--line-strong)"}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-            <div style={{ minWidth: 240, flex: 1 }}>
-              <div className="heading" style={{ fontSize: "0.92rem" }}>Relay in-game chat to Discord</div>
-              <div className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", marginTop: 2 }}>
-                Post this world&apos;s captured in-game chat to the webhook above for a Palworld→Discord feed.
-                Needs the chat relay mod installed on the <b>Chat</b> tab.
+      {/* ---- Per-event routing ---- */}
+      <section>
+        <label className="label">Route events</label>
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", marginTop: 0, marginBottom: "0.7rem" }}>
+          Pick the channel each event posts to, or <b>Don&apos;t send</b> to mute it.
+        </p>
+        <div style={{ display: "grid", gap: "0.4rem" }}>
+          {ROUTE_KINDS.map((k) => {
+            const routed = routes[k];
+            const missingUrl = routed && !(hookById(routed)?.url || "").trim();
+            return (
+              <div key={k} className="panel-inset" style={{ padding: "0.55rem 0.9rem", display: "flex", alignItems: "center", gap: "0.8rem", flexWrap: "wrap" }}>
+                <div style={{ minWidth: 150, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: "0.84rem" }}>{KIND_LABELS[k]}</div>
+                  {k === "chat" && (
+                    <div className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem" }}>
+                      Needs the chat relay mod installed on the <b>Chat</b> tab.
+                    </div>
+                  )}
+                  {missingUrl && (
+                    <div style={{ color: "var(--yellow)", fontWeight: 700, fontSize: "0.72rem" }}>
+                      This channel has no webhook URL — nothing will be sent.
+                    </div>
+                  )}
+                </div>
+                <select className="input" style={{ width: 200 }} value={routed}
+                  onChange={(e) => setRoute(k, e.target.value)} aria-label={`Channel for ${KIND_LABELS[k]}`}>
+                  <option value="">Don&apos;t send</option>
+                  {hooks.map((h) => (
+                    <option key={h.id} value={h.id}>{h.name.trim() || "Webhook"}</option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <button className={`btn ${relay ? "btn-primary" : "btn-ghost"}`} onClick={() => setRelay((v) => !v)}>
-              <span className="statdot" style={{ background: relay ? "var(--accent-ink)" : "var(--ink-soft)" }} /> {relay ? "On" : "Off"}
-            </button>
-          </div>
+            );
+          })}
         </div>
       </section>
 

@@ -5,6 +5,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [2.0.1] — 2026-07-12
 
+### Added
+- **Send different Discord events to different channels.** The Discord tab previously
+  had a single webhook, so every notification went to one channel. You can now add
+  several named webhook **channels** and route each event to whichever one you want —
+  e.g. a **Status** channel for start/stop/restart/crash/update, a separate **Backup**
+  channel, and a **Chat** channel for the in-game chat relay. Each event has a
+  drop-down to pick its channel (or *Don't send* to mute it), and every channel has
+  its own **Test** button. Existing single-webhook setups are carried over unchanged —
+  they appear as one "Default" channel with everything routed to it.
+
 ### Fixed
 - **Backups and crashes now actually post to Discord.** The Discord tab's *Notify
   on* list offered **backup** and **crash** toggles, but nothing was ever sent for
