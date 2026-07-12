@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/ThemeProvider";
+import FirstRunWizard from "@/components/FirstRunWizard";
 import { Icon, registerToast } from "@/components/ui";
 import { useJobsPoll, summarize, ProgressBar } from "@/components/jobsClient";
 
@@ -53,6 +54,7 @@ export default function Shell({ children }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", height: "100vh", overflow: "hidden" }}>
+      <FirstRunWizard />
       {/* Single merged collapsible sidebar */}
       <aside style={{
         width: W, background: "var(--sidebar)", display: "flex", flexDirection: "column",

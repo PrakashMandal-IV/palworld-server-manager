@@ -196,4 +196,5 @@ ipcMain.handle("pick-zip", async () => {
   return res.canceled ? null : res.filePaths[0];
 });
 ipcMain.handle("get-theme", () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"));
+ipcMain.handle("get-system-locale", () => app.getLocale() || "en");
 ipcMain.handle("open-path", (_e, p) => shell.openPath(p));

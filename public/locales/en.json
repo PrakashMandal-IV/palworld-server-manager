@@ -19,6 +19,14 @@
     "app.upToDate": "up to date",
     "action.toggleTheme": "Toggle theme",
     "action.expand": "Expand",
-    "action.collapse": "Collapse"
+    "action.collapse": "Collapse",
+    "settings.language": "Language",
+    "settings.languageHelp": "Changes every translated label in the app. You can switch anytime.",
+    "settings.languagePartial": "Some text may still appear in English until this language pack is fully translated.",
+    "language.completeness": "{{percent}}% translated",
+    "wizard.title": "Welcome to Palworld Server Manager",
+    "wizard.subtitle": "Choose your language to get started.",
+    "wizard.help": "You can change this later in Settings.",
+    "wizard.continue": "Get started"
   }
 }

@@ -1,23 +1,40 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/ThemeProvider";
+import { switchLanguage } from "@/lib/i18n/client";
 import { api, Icon, toast } from "@/components/ui";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
   const [s, setS] = useState(null);
   const [steam, setSteam] = useState(null);
   const [saving, setSaving] = useState(false);
   const [backupLoc, setBackupLoc] = useState(null);
   const [backupPath, setBackupPath] = useState("");
+  const [langs, setLangs] = useState([]);
+  const [switching, setSwitching] = useState(false);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
 
   useEffect(() => {
     api("/api/settings").then((r) => setS(r.settings)).catch(() => {});
     api("/api/steamcmd").then(setSteam).catch(() => {});
     api("/api/settings/backup-dir").then((r) => { setBackupLoc(r.backup); setBackupPath(r.backup.custom ? r.backup.path : ""); }).catch(() => {});
+    api("/api/i18n/languages").then((r) => setLangs(r.languages || [])).catch(() => {});
   }, []);
+
+  const chooseLanguage = async (code) => {
+    if (code === i18n.language) return;
+    setSwitching(true);
+    try {
+      const meta = langs.find((l) => l.code === code);
+      await switchLanguage(code, meta?.dir || "ltr");
+      setS((prev) => (prev ? { ...prev, language: code } : prev));
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSwitching(false); }
+  };
 
   const saveBackupDir = async (p) => {
     setSaving(true);
@@ -59,6 +76,30 @@ export default function SettingsPage() {
           <button className={`btn ${theme === "light" ? "btn-primary" : "btn-ghost"}`} onClick={() => setTheme("light")}><Icon name="sun" /> Light</button>
           <button className={`btn ${theme === "dark" ? "btn-primary" : "btn-ghost"}`} onClick={() => setTheme("dark")}><Icon name="moon" /> Dark</button>
         </div>
+      </div>
+
+      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>
+          <Icon name="globe" size={17} /> {t("settings.language")}
+        </h3>
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 0.6rem" }}>{t("settings.languageHelp")}</p>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap", maxWidth: 360 }}>
+          <select className="input" style={{ flex: 1, minWidth: 200 }} value={i18n.language} disabled={switching}
+            onChange={(e) => chooseLanguage(e.target.value)}>
+            {langs.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.nativeName}{l.completeness < 100 ? ` — ${t("language.completeness", { percent: l.completeness })}` : ""}
+              </option>
+            ))}
+          </select>
+          {switching && <span className="subtle" style={{ fontSize: "0.78rem", fontWeight: 700 }}>…</span>}
+        </div>
+        {(() => {
+          const cur = langs.find((l) => l.code === i18n.language);
+          return cur && cur.completeness < 100 ? (
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", margin: "0.5rem 0 0" }}>{t("settings.languagePartial")}</p>
+          ) : null;
+        })()}
       </div>
 
       <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>

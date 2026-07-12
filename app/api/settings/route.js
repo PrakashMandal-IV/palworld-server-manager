@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // Discord webhook/notify-events/chat-relay moved to per-world (world Admin tab).
-const KEYS = ["theme", "backupRetention", "chatCaptureEnabled", "language"];
+const KEYS = ["theme", "backupRetention", "chatCaptureEnabled", "language", "onboarded"];
 
 export async function GET() {
   const out = {};
@@ -26,5 +26,6 @@ function defaultFor(k) {
   if (k === "backupRetention") return 10;
   if (k === "chatCaptureEnabled") return true;
   if (k === "language") return "en";
+  if (k === "onboarded") return false;
   return "";
 }
