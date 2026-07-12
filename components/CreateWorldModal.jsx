@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
 
 export default function CreateWorldModal({ onClose, onDone }) {
@@ -16,18 +17,19 @@ export default function CreateWorldModal({ onClose, onDone }) {
 }
 
 function ChooseMode({ onPick, onClose }) {
+  const { t } = useTranslation();
   return (
     <div>
-      <Header title="Add a world" onClose={onClose} />
+      <Header title={t("create.addWorld")} onClose={onClose} />
       <p className="subtle" style={{ fontWeight: 600, marginTop: 0, marginBottom: "1.2rem" }}>
-        Install a fresh Palworld dedicated server, or register a server you already have on disk.
+        {t("create.addIntro")}
       </p>
       <div style={{ display: "grid", gap: "0.7rem" }}>
-        <ModeCard icon="download" title="Install new server"
-          desc="Download the dedicated server with SteamCMD into a folder you choose."
+        <ModeCard icon="download" title={t("create.installNew")}
+          desc={t("create.installNewDesc")}
           onClick={() => onPick("new")} />
-        <ModeCard icon="folder" title="Use existing install"
-          desc="Point to a PalServer folder you already downloaded. No re-download."
+        <ModeCard icon="folder" title={t("create.useExisting")}
+          desc={t("create.useExistingDesc")}
           onClick={() => onPick("existing")} />
       </div>
     </div>
@@ -58,20 +60,22 @@ function usePorts() {
 }
 
 function PortGrid({ ports, setPorts }) {
+  const { t } = useTranslation();
   if (!ports) return null;
   return (
     <div className="panel-inset" style={{ padding: "0.8rem", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "0.6rem" }}>
-      <PortField label="Game (UDP)" v={ports.game_port} onChange={(v) => setPorts({ ...ports, game_port: v, query_port: v + 1 })} />
-      <PortField label="Query" v={ports.query_port} onChange={(v) => setPorts({ ...ports, query_port: v })} />
-      <PortField label="REST (TCP)" v={ports.rest_api_port} onChange={(v) => setPorts({ ...ports, rest_api_port: v })} />
-      <PortField label="RCON (legacy)" v={ports.rcon_port} onChange={(v) => setPorts({ ...ports, rcon_port: v })} />
+      <PortField label={t("create.portGame")} v={ports.game_port} onChange={(v) => setPorts({ ...ports, game_port: v, query_port: v + 1 })} />
+      <PortField label={t("create.portQuery")} v={ports.query_port} onChange={(v) => setPorts({ ...ports, query_port: v })} />
+      <PortField label={t("create.portRest")} v={ports.rest_api_port} onChange={(v) => setPorts({ ...ports, rest_api_port: v })} />
+      <PortField label={t("create.portRcon")} v={ports.rcon_port} onChange={(v) => setPorts({ ...ports, rcon_port: v })} />
     </div>
   );
 }
 
 /* ---------- Install new (SteamCMD) ---------- */
 function NewInstall({ onBack, onClose, onDone }) {
-  const [name, setName] = useState("My Palworld World");
+  const { t } = useTranslation();
+  const [name, setName] = useState(t("create.defaultWorldName"));
   const [dir, setDir] = useState("");
   const [ports, setPorts] = usePorts();
   const [password, setPassword] = useState("");
@@ -80,40 +84,40 @@ function NewInstall({ onBack, onClose, onDone }) {
 
   const pickDir = async () => {
     if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) setDir(p); }
-    else toast("Type the full server folder path (native picker is in the desktop app).");
+    else toast(t("create.typePathToast"));
   };
 
   // Start the install, then hand off to the global downloads tray so progress
   // is visible everywhere (and the modal is never a trap).
   const start = async () => {
-    if (!dir.trim()) return toast("Choose an install folder first", "error");
+    if (!dir.trim()) return toast(t("create.chooseFolderFirst"), "error");
     setStarting(true);
     try {
       await api("/api/provision", { method: "POST", body: { display_name: name, install_dir: dir.trim(), ports, admin_password: password || undefined } });
       try { window.__palJobsPing?.(); } catch {}
-      toast("Install started — track progress in the downloads tray", "success");
+      toast(t("create.installStarted"), "success");
       onDone();
     } catch (e) { toast(e.message, "error"); setStarting(false); }
   };
 
   return (
     <div>
-      <Header title="Install new server" onClose={onClose} onBack={onBack} />
+      <Header title={t("create.installNew")} onClose={onClose} onBack={onBack} />
       <div style={{ display: "grid", gap: "0.9rem" }}>
-        <Field label="World name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-        <Field label="Install folder" hint="SteamCMD installs the dedicated server (app 2394010) here. Each world needs its own folder.">
+        <Field label={t("create.worldName")}><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+        <Field label={t("create.installFolder")} hint={t("create.installFolderHint")}>
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <input className="input" value={dir} onChange={(e) => setDir(e.target.value)} placeholder={isElectron ? "Click Browse to choose a folder" : "e.g. C:\\PalworldServers\\world1"} />
-            <button className="btn btn-ghost" onClick={pickDir}><Icon name="folder" /> Browse</button>
+            <input className="input" value={dir} onChange={(e) => setDir(e.target.value)} placeholder={isElectron ? t("create.browsePlaceholder") : "e.g. C:\\PalworldServers\\world1"} />
+            <button className="btn btn-ghost" onClick={pickDir}><Icon name="folder" /> {t("common.browse")}</button>
           </div>
         </Field>
         <PortGrid ports={ports} setPorts={setPorts} />
-        <Field label="Admin password" hint="Leave blank to auto-generate. Used for REST API + RCON auth.">
+        <Field label={t("create.adminPassword")} hint={t("create.adminPasswordHint")}>
           <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>
         <Actions>
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={start} disabled={starting}><Icon name="download" /> {starting ? "Starting…" : "Install server"}</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t("common.cancel")}</button>
+          <button className="btn btn-primary" onClick={start} disabled={starting}><Icon name="download" /> {starting ? t("common.starting") : t("create.installServer")}</button>
         </Actions>
       </div>
     </div>
@@ -122,6 +126,7 @@ function NewInstall({ onBack, onClose, onDone }) {
 
 /* ---------- Use existing install ---------- */
 function ExistingInstall({ onBack, onClose, onDone }) {
+  const { t } = useTranslation();
   const [dir, setDir] = useState("");
   const [info, setInfo] = useState(null);
   const [checking, setChecking] = useState(false);
@@ -133,17 +138,17 @@ function ExistingInstall({ onBack, onClose, onDone }) {
 
   const pick = async () => {
     if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) { setDir(p); detect(p); } }
-    else toast("Type the full server folder path (native picker is in the desktop app).");
+    else toast(t("create.typePathToast"));
   };
 
   const detect = async (p) => {
     const target = (p || dir).trim();
-    if (!target) return toast("Enter a folder path first", "error");
+    if (!target) return toast(t("create.enterFolderFirst"), "error");
     setChecking(true); setInfo(null);
     try {
       const { info } = await api(`/api/detect?path=${encodeURIComponent(target)}`);
       setInfo(info);
-      if (info.valid) setName(info.serverName || "Existing World");
+      if (info.valid) setName(info.serverName || t("create.existingWorldName"));
     } catch (e) { toast(e.message, "error"); }
     finally { setChecking(false); }
   };
@@ -152,7 +157,7 @@ function ExistingInstall({ onBack, onClose, onDone }) {
     setSaving(true);
     try {
       await api("/api/adopt", { method: "POST", body: { display_name: name, install_dir: info.installDir, ports, keepExistingPassword: keepPw } });
-      toast("Existing server registered", "success");
+      toast(t("create.registered"), "success");
       onDone();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
@@ -160,14 +165,14 @@ function ExistingInstall({ onBack, onClose, onDone }) {
 
   return (
     <div>
-      <Header title="Use existing install" onClose={onClose} onBack={onBack} />
-      <Field label="Server folder or PalServer path" hint="Point to the folder containing PalServer.exe (Windows) or PalServer.sh (Linux).">
+      <Header title={t("create.useExisting")} onClose={onClose} onBack={onBack} />
+      <Field label={t("create.serverFolderLabel")} hint={t("create.serverFolderHint")}>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <input className="input" value={dir} onChange={(e) => setDir(e.target.value)}
-            placeholder={isElectron ? "Click Browse to choose the folder" : "e.g. C:\\SteamLibrary\\steamapps\\common\\PalServer"}
+            placeholder={isElectron ? t("create.browseFolderPlaceholder") : "e.g. C:\\SteamLibrary\\steamapps\\common\\PalServer"}
             onKeyDown={(e) => e.key === "Enter" && detect()} />
-          <button className="btn btn-ghost" onClick={pick}><Icon name="folder" /> Browse</button>
-          <button className="btn btn-subtle" onClick={() => detect()} disabled={checking}>{checking ? "Checking…" : "Detect"}</button>
+          <button className="btn btn-ghost" onClick={pick}><Icon name="folder" /> {t("common.browse")}</button>
+          <button className="btn btn-subtle" onClick={() => detect()} disabled={checking}>{checking ? t("common.checking") : t("create.detect")}</button>
         </div>
       </Field>
 
@@ -180,23 +185,23 @@ function ExistingInstall({ onBack, onClose, onDone }) {
       {info && info.valid && (
         <div style={{ display: "grid", gap: "0.9rem" }}>
           <div className="panel-inset" style={{ padding: "0.8rem 0.9rem", borderLeft: "3px solid var(--green-bright)" }}>
-            <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 4 }}>✓ Palworld server detected</div>
+            <div style={{ fontWeight: 700, fontSize: "0.88rem", marginBottom: 4 }}>{t("create.serverDetected")}</div>
             <div className="subtle" style={{ fontSize: "0.8rem", fontWeight: 600, display: "grid", gap: 2 }}>
-              <span>Binary: {info.binaryOs === "win32" ? "PalServer.exe" : "PalServer.sh"}</span>
-              <span>Build id: {info.buildId || "unknown (no Steam manifest)"}</span>
-              <span>Existing save: {info.hasExistingSave ? "yes" : "none"}</span>
-              {!info.matchesHostOs && <span style={{ color: "var(--yellow)" }}>⚠ This build targets a different OS than this machine.</span>}
+              <span>{t("create.binary", { name: info.binaryOs === "win32" ? "PalServer.exe" : "PalServer.sh" })}</span>
+              <span>{t("create.buildId", { id: info.buildId || t("create.buildIdUnknown") })}</span>
+              <span>{t("create.existingSave", { val: info.hasExistingSave ? t("common.yes") : t("common.none") })}</span>
+              {!info.matchesHostOs && <span style={{ color: "var(--yellow)" }}>{t("create.osWarning")}</span>}
             </div>
           </div>
-          <Field label="World name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
+          <Field label={t("create.worldName")}><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></Field>
           <PortGrid ports={ports} setPorts={setPorts} />
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 600, fontSize: "0.86rem", cursor: "pointer" }}>
             <input type="checkbox" checked={keepPw} onChange={(e) => setKeepPw(e.target.checked)} />
-            Keep the server&apos;s existing admin password (from its settings file)
+            {t("create.keepPassword")}
           </label>
           <Actions>
-            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" onClick={adopt} disabled={saving}><Icon name="plus" /> {saving ? "Adding…" : "Add this server"}</button>
+            <button className="btn btn-ghost" onClick={onClose}>{t("common.cancel")}</button>
+            <button className="btn btn-primary" onClick={adopt} disabled={saving}><Icon name="plus" /> {saving ? t("create.adding") : t("create.addThisServer")}</button>
           </Actions>
         </div>
       )}
