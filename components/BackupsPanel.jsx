@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, Icon, fmtBytes, fmtTime, toast } from "@/components/ui";
 
 export default function BackupsPanel({ worldId, backups, running, onChange }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [importing, setImporting] = useState(false);
   const [loc, setLoc] = useState(null);
@@ -18,33 +20,33 @@ export default function BackupsPanel({ worldId, backups, running, onChange }) {
     setBusy(true);
     try {
       await api(`/api/worlds/${worldId}/backups`, { method: "POST" });
-      toast("Backup created", "success");
+      toast(t("backups.created"), "success");
       onChange();
     } catch (e) { toast(e.message, "error"); }
     finally { setBusy(false); }
   };
 
   const restore = async (backupId) => {
-    if (running) return toast("Stop the world before restoring", "error");
-    if (!confirm("Restore this backup? A safety backup of the current save is taken first.")) return;
+    if (running) return toast(t("backups.stopBeforeRestore"), "error");
+    if (!confirm(t("backups.confirmRestore"))) return;
     setBusy(true);
     try {
       await api(`/api/worlds/${worldId}/backups/restore`, { method: "POST", body: { backupId } });
-      toast("Backup restored", "success");
+      toast(t("backups.restored"), "success");
       onChange();
     } catch (e) { toast(e.message, "error"); }
     finally { setBusy(false); }
   };
 
   const importSave = async () => {
-    if (running) return toast("Stop the world before importing", "error");
-    if (!isElectron) return toast("Save import via file picker is available in the desktop app.");
+    if (running) return toast(t("backups.stopBeforeImport"), "error");
+    if (!isElectron) return toast(t("backups.importPickerDesktop"));
     const zipPath = await window.desktop.pickZip();
     if (!zipPath) return;
     setImporting(true);
     try {
       const { check } = await api(`/api/worlds/${worldId}/import`, { method: "POST", body: { zipPath } });
-      toast(`Imported save · ${check.playerCount} players`, "success");
+      toast(t("backups.imported", { count: check.playerCount }), "success");
       onChange();
     } catch (e) { toast(e.message, "error"); }
     finally { setImporting(false); }
@@ -54,14 +56,14 @@ export default function BackupsPanel({ worldId, backups, running, onChange }) {
     <div>
       <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem", flexWrap: "wrap" }}>
         <button className="btn btn-primary" onClick={create} disabled={busy}>
-          <Icon name="download" /> {busy ? "Working…" : "Back up now"}
+          <Icon name="download" /> {busy ? t("backups.working") : t("backups.backupNow")}
         </button>
         <button className="btn btn-ghost" onClick={importSave} disabled={importing || running}>
-          <Icon name="upload" /> {importing ? "Importing…" : "Import save (.zip)"}
+          <Icon name="upload" /> {importing ? t("backups.importing") : t("backups.importSave")}
         </button>
         {isElectron && loc?.worldPath && (
           <button className="btn btn-ghost" onClick={openFolder} title={loc.worldPath}>
-            <Icon name="folder" /> Open backup folder
+            <Icon name="folder" /> {t("backups.openFolder")}
           </button>
         )}
       </div>
@@ -73,7 +75,7 @@ export default function BackupsPanel({ worldId, backups, running, onChange }) {
       )}
 
       {backups.length === 0 ? (
-        <p className="subtle" style={{ fontWeight: 700 }}>No backups yet. Backups zip this world&apos;s Saved folder and rotate automatically.</p>
+        <p className="subtle" style={{ fontWeight: 700 }}>{t("backups.empty")}</p>
       ) : (
         <div style={{ display: "grid", gap: "0.5rem" }}>
           {backups.map((b) => (
@@ -84,7 +86,7 @@ export default function BackupsPanel({ worldId, backups, running, onChange }) {
                 <div className="subtle" style={{ fontSize: "0.72rem", fontWeight: 700 }}>{fmtBytes(b.size_bytes)} · {b.reason}</div>
               </div>
               <button className="btn btn-ghost" style={{ padding: "0.3rem 0.7rem" }} disabled={busy || running} onClick={() => restore(b.id)}>
-                <Icon name="restart" size={14} /> Restore
+                <Icon name="restart" size={14} /> {t("common.restore")}
               </button>
             </div>
           ))}
