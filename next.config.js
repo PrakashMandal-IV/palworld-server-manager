@@ -8,6 +8,10 @@ const nextConfig = {
   // binary) are traced into the standalone node_modules rather than bundled.
   experimental: {
     serverComponentsExternalPackages: ["node-sqlite3-wasm"],
+    // Never trace the local runtime data dir into the standalone build. `.data/`
+    // holds the dev database (worlds + admin passwords), SteamCMD, logs and backups;
+    // it must be created fresh on the end user's machine, never shipped in the app.
+    outputFileTracingExcludes: { "*": [".data/**", "release/**", "dist-standalone/**"] },
   },
   webpack: (config, { isServer }) => {
     if (isServer) {

@@ -43,6 +43,16 @@ rmrf(out);
 // 1. copy the whole standalone tree (includes server.js + traced node_modules + .next server chunks)
 copyDir(standalone, out);
 
+// 1b. GUARANTEE no local runtime data ships in the app. Next's file tracer can sweep
+//     the project-root `.data/` (dev database with worlds + admin passwords, SteamCMD,
+//     logs, backups) into the standalone tree. This dir must be recreated fresh on the
+//     end user's machine, so scrub it (and other local build artifacts) unconditionally
+//     before electron-builder packages dist-standalone into the installer.
+for (const junk of [".data", "release", "dist-standalone"]) {
+  const p = path.join(out, junk);
+  if (fs.existsSync(p)) { rmrf(p); console.log(`Scrubbed local-only dir from build: ${junk}/`); }
+}
+
 // 2. copy client static assets into .next/static (standalone does NOT include these)
 copyDir(path.join(root, ".next", "static"), path.join(out, ".next", "static"));
 

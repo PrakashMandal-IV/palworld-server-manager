@@ -3,6 +3,26 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.0.1] — 2026-07-12
+
+### Fixed
+- **The connect address now shows your real network IP, not just `127.0.0.1`.** The
+  Overview showed only `127.0.0.1:<port>`, which works *only* from the PC running the
+  server — leading some to think the app forced the server to bind to loopback. It
+  never did: the server listens on every network adapter. The panel now leads with
+  your **Same network (LAN)** address (e.g. `192.168.31.243:8211`) that other PCs on
+  your network use, clearly marks `127.0.0.1` as **This PC only**, lists your other
+  adapters, and spells out that reaching it over the internet is a router
+  port-forward/tunnel step. Local network adapters are ranked so your real
+  Ethernet/Wi-Fi wins over virtual ones (Hyper-V, WSL, VPNs).
+- **Ports could not be changed after a world was created.** The Admin tab showed a
+  world's Game/Query/REST API/RCON ports as plain text — there was no way to give a
+  world custom ports once it existed, even though the app supported it internally.
+  These are now editable fields with a **Save ports** button (world must be stopped).
+  Saving now also rejects invalid port numbers, a port already used by another
+  world, and two of a world's own ports being set to the same value — previously
+  these were accepted silently and could produce a broken configuration.
+
 ## [2.0.0] — 2026-07-12
 
 ### Added
