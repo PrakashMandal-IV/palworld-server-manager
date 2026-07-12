@@ -14,7 +14,21 @@ export default function AdminPanel({ world, running, onChange }) {
   const [saving, setSaving] = useState(false);
   const [installDir, setInstallDir] = useState(world.install_dir || "");
   const [movingDir, setMovingDir] = useState(false);
+  const [ports, setPorts] = useState({ game_port: world.game_port, query_port: world.query_port, rest_api_port: world.rest_api_port, rcon_port: world.rcon_port });
+  const [savingPorts, setSavingPorts] = useState(false);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
+  const portsChanged = ["game_port", "query_port", "rest_api_port", "rcon_port"].some((k) => Number(ports[k]) !== Number(world[k]));
+
+  const savePorts = async () => {
+    if (running) return toast("Stop the world before changing its ports.", "error");
+    setSavingPorts(true);
+    try {
+      await api(`/api/worlds/${world.world_id}`, { method: "PATCH", body: ports });
+      toast("Ports updated — start the world to apply", "success");
+      onChange();
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSavingPorts(false); }
+  };
 
   const pickDir = async () => {
     if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) setInstallDir(p); }
@@ -143,16 +157,32 @@ export default function AdminPanel({ world, running, onChange }) {
 
       <section>
         <h3 className="heading" style={{ fontSize: "1rem" }}>Connection</h3>
-        <div className="panel-inset" style={{ padding: "0.8rem 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: "0.6rem", fontSize: "0.82rem", fontWeight: 700 }}>
-          <div><span className="subtle">Game port</span><br />{world.game_port}</div>
-          <div><span className="subtle">Query port</span><br />{world.query_port}</div>
-          <div><span className="subtle">REST API port</span><br />{world.rest_api_port}</div>
-          <div><span className="subtle">RCON port (legacy)</span><br />{world.rcon_enabled ? world.rcon_port : "off"}</div>
+        <div className="panel-inset" style={{ padding: "0.8rem 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: "0.6rem" }}>
+          <PortField label="Game port (UDP)" value={ports.game_port} disabled={running} onChange={(v) => setPorts((p) => ({ ...p, game_port: v }))} />
+          <PortField label="Query port" value={ports.query_port} disabled={running} onChange={(v) => setPorts((p) => ({ ...p, query_port: v }))} />
+          <PortField label="REST API port" value={ports.rest_api_port} disabled={running} onChange={(v) => setPorts((p) => ({ ...p, rest_api_port: v }))} />
+          <PortField label="RCON port (legacy)" value={ports.rcon_port} disabled={running || !world.rcon_enabled} onChange={(v) => setPorts((p) => ({ ...p, rcon_port: v }))} />
         </div>
         <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem", marginTop: "0.5rem" }}>
-          Only the game UDP port needs to be reachable by players. Keep the REST API port LAN-only. RCON is deprecated by Pocketpair and disabled by default — this manager uses the REST API for all administration.
+          Only the game UDP port needs to be reachable by players (port-forward this one on your router). Keep the REST API port LAN-only. RCON is deprecated by Pocketpair and disabled by default — this manager uses the REST API for all administration.
+          {running ? " Stop the world to change ports." : " Changes take effect the next time this world starts."}
         </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.6rem" }}>
+          <button className="btn btn-primary" onClick={savePorts} disabled={running || savingPorts || !portsChanged}>
+            {savingPorts ? "Saving…" : "Save ports"}
+          </button>
+        </div>
       </section>
+    </div>
+  );
+}
+
+function PortField({ label, value, onChange, disabled }) {
+  return (
+    <div>
+      <label className="label" style={{ fontSize: "0.7rem" }}>{label}</label>
+      <input className="input" type="number" value={value} disabled={disabled}
+        onChange={(e) => onChange(parseInt(e.target.value || "0", 10))} />
     </div>
   );
 }

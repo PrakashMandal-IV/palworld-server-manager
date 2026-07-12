@@ -5,6 +5,7 @@ const sup = require("@/lib/supervisor");
 const rest = require("@/lib/restclient");
 const ini = require("@/lib/ini");
 const steam = require("@/lib/steamcmd");
+const { conflictsInRegistry } = require("@/lib/ports");
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -79,6 +80,36 @@ export async function PATCH(req, { params }) {
   for (const k of ["warn_lead_minutes", "warn_interval_minutes"]) {
     if (k in clean) clean[k] = Math.max(0, parseInt(clean[k], 10) || 0);
   }
+
+  // Port fields: validate range and reject collisions with another world's ports
+  // before writing anything (previously these were accepted silently, so two worlds
+  // could end up sharing a port with no warning).
+  const PORT_FIELDS = ["game_port", "query_port", "rest_api_port", "rcon_port"];
+  if (PORT_FIELDS.some((k) => k in clean)) {
+    for (const k of PORT_FIELDS) {
+      if (k in clean) {
+        const n = parseInt(clean[k], 10);
+        if (!Number.isInteger(n) || n < 1 || n > 65535) {
+          return NextResponse.json({ ok: false, error: `Invalid ${k}: must be a port number between 1 and 65535.` }, { status: 400 });
+        }
+        clean[k] = n;
+      }
+    }
+    const check = { game_port: clean.game_port ?? w.game_port, query_port: clean.query_port ?? w.query_port, rest_api_port: clean.rest_api_port ?? w.rest_api_port, rcon_port: clean.rcon_port ?? w.rcon_port };
+    const seen = new Set();
+    for (const [label, p] of Object.entries(check)) {
+      if (seen.has(p)) return NextResponse.json({ ok: false, error: `Port ${p} is used by more than one field on this world — each port must be unique.` }, { status: 400 });
+      seen.add(p);
+    }
+    const conflicts = conflictsInRegistry(check, params.id);
+    if (conflicts.length) {
+      return NextResponse.json({ ok: false, error: `Port ${conflicts[0].port} is already used by "${conflicts[0].usedBy}".` }, { status: 409 });
+    }
+    if (sup.isRunning(w.world_id) || sup.pidAlive(w.process_id)) {
+      return NextResponse.json({ ok: false, error: "Stop the world before changing its ports." }, { status: 409 });
+    }
+  }
+
   const updated = dbm.updateWorld(params.id, clean);
   // if network fields changed and install exists, re-apply ini. Only re-sync the
   // advertised PublicPort when the game port itself changed, so a routine profile
