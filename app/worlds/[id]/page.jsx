@@ -281,30 +281,63 @@ function QuickStat({ label, value }) {
 
 function ConnectionBar({ world }) {
   const [copied, setCopied] = useState(null);
-  const url = `127.0.0.1:${world.game_port}`;
+  const [lan, setLan] = useState(null);
+  const port = world.game_port;
+  useEffect(() => { api("/api/netinfo").then((r) => setLan(r.lan || [])).catch(() => setLan([])); }, []);
   const copy = (text, which) => {
     try { navigator.clipboard.writeText(text); setCopied(which); setTimeout(() => setCopied(null), 1500); } catch {}
   };
+  const primaryLan = lan && lan.find((a) => a.primary);
   return (
-    <div style={{ marginTop: "1.1rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
-      <div className="panel-inset" style={{ display: "flex", alignItems: "center", gap: "0.7rem", padding: "0.55rem 0.9rem", flex: 1, minWidth: 260 }}>
-        <Icon name="globe" size={16} />
-        <div style={{ lineHeight: 1.2 }}>
-          <div className="subtle" style={{ fontSize: "0.64rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>Connect (this PC)</div>
-          <code style={{ fontSize: "0.95rem", fontWeight: 700 }}>{url}</code>
-        </div>
-        <button className="btn btn-ghost" style={{ marginLeft: "auto", padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={() => copy(url, "local")}>
-          {copied === "local" ? "Copied!" : "Copy"}
-        </button>
+    <div style={{ marginTop: "1.1rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "flex-start" }}>
+      <div style={{ display: "grid", gap: "0.45rem", flex: 1, minWidth: 260 }}>
+        {/* Same network (LAN) — the address other PCs on this network use. Shown first
+            because it's what most people actually want and dispels the idea that the
+            server only listens on 127.0.0.1. */}
+        {primaryLan && (
+          <ConnectRow label="Same network (LAN)" value={`${primaryLan.address}:${port}`} which="lan"
+            copied={copied} onCopy={copy} accent />
+        )}
+        {/* This PC only — 127.0.0.1 works solely from the machine running the server. */}
+        <ConnectRow label="This PC only" value={`127.0.0.1:${port}`} which="local" copied={copied} onCopy={copy} />
+        {lan && lan.length > 1 && (
+          <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 600 }}>
+            Other network adapters:{" "}
+            {lan.filter((a) => !a.primary).map((a) => `${a.address}`).join(", ")}
+          </div>
+        )}
+        {lan && lan.length === 0 && (
+          <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 600 }}>
+            No LAN address detected — the server still listens on all network adapters; use this PC&apos;s IP from your OS network settings.
+          </div>
+        )}
       </div>
       <div className="subtle" style={{ fontSize: "0.72rem", fontWeight: 600, maxWidth: 320 }}>
-        In Palworld: <b>Join Multiplayer → Connect via IP</b> and paste this. For friends over the internet, use your public IP or a hosting/port-forwarded address on port {world.game_port}.
+        In Palworld: <b>Join Multiplayer → Connect via IP</b> and paste an address above.
+        Players <b>on your network</b> use the <b>LAN</b> address; from this same PC use <b>127.0.0.1</b>.
+        The server isn&apos;t bound to any one address — it listens on every adapter on port {port}.
+        For friends <b>over the internet</b>, forward/tunnel UDP port {port} and share your public IP.
         <div style={{ marginTop: 6 }}>
           <a href="/info" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>
             → Want friends to join over the internet? See the free playit.gg guide
           </a>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ConnectRow({ label, value, which, copied, onCopy, accent }) {
+  return (
+    <div className="panel-inset" style={{ display: "flex", alignItems: "center", gap: "0.7rem", padding: "0.55rem 0.9rem", borderLeft: accent ? "3px solid var(--accent)" : undefined }}>
+      <Icon name="globe" size={16} />
+      <div style={{ lineHeight: 1.2 }}>
+        <div className="subtle" style={{ fontSize: "0.64rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
+        <code style={{ fontSize: "0.95rem", fontWeight: 700 }}>{value}</code>
+      </div>
+      <button className="btn btn-ghost" style={{ marginLeft: "auto", padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={() => onCopy(value, which)}>
+        {copied === which ? "Copied!" : "Copy"}
+      </button>
     </div>
   );
 }
