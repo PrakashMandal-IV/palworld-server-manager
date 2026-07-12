@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useJobsPoll, JobCard } from "@/components/jobsClient";
 
 export default function DownloadsPage() {
+  const { t } = useTranslation();
   const jobs = useJobsPoll();
   const [dismissed, setDismissed] = useState(() => new Set());
 
@@ -20,21 +22,21 @@ export default function DownloadsPage() {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.2rem" }}>
-        <h1 className="heading" style={{ fontSize: "1.6rem", margin: 0 }}>Downloads &amp; updates</h1>
+        <h1 className="heading" style={{ fontSize: "1.6rem", margin: 0 }}>{t("downloads.title")}</h1>
         {history.length > 0 && (
-          <button className="btn btn-ghost" onClick={clearHistory}>Clear history</button>
+          <button className="btn btn-ghost" onClick={clearHistory}>{t("downloads.clearHistory")}</button>
         )}
       </div>
 
-      <Section title={`In progress${active.length ? ` (${active.length})` : ""}`}>
+      <Section title={`${t("downloads.inProgress")}${active.length ? ` (${active.length})` : ""}`}>
         {active.length === 0
-          ? <Empty text="No active downloads or updates." />
+          ? <Empty text={t("downloads.noActive")} />
           : <div style={{ display: "grid", gap: "0.7rem" }}>{active.map((j) => <JobCard key={j.id} job={j} />)}</div>}
       </Section>
 
-      <Section title="History">
+      <Section title={t("downloads.history")}>
         {history.length === 0
-          ? <Empty text="Completed installs and updates will appear here." />
+          ? <Empty text={t("downloads.historyEmpty")} />
           : <div style={{ display: "grid", gap: "0.7rem" }}>{history.map((j) => <JobCard key={j.id} job={j} onDismiss={() => dismiss(j.id)} />)}</div>}
       </Section>
     </div>
