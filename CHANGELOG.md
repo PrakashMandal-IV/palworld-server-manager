@@ -6,6 +6,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [2.0.1] — 2026-07-12
 
 ### Added
+- **Portable Windows build (no installation).** The release now ships a portable
+  `.exe` alongside the installer. It runs with no install and keeps everything it
+  writes — the worlds database, backups, SteamCMD, and logs — in a `PSM-Data` folder
+  created right next to the executable, so nothing is left in `%AppData%`. Copy the
+  `.exe` together with its `PSM-Data` folder to a USB stick or another PC and your
+  whole setup travels with it. The installer build is unchanged and still stores its
+  data in `%AppData%` as before.
 - **Send different Discord events to different channels.** The Discord tab previously
   had a single webhook, so every notification went to one channel. You can now add
   several named webhook **channels** and route each event to whichever one you want —

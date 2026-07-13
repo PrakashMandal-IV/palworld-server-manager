@@ -59,6 +59,12 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "public/icon.ico"
@@ -70,6 +76,9 @@
       "installerIcon": "public/icon.ico",
       "uninstallerIcon": "public/icon.ico",
       "installerHeaderIcon": "public/icon.ico"
+    },
+    "portable": {
+      "artifactName": "PalworldServerManager-${version}-portable.exe"
     },
     "linux": {
       "target": [

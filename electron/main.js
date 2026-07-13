@@ -12,6 +12,21 @@ let nextProc = null;
 let serverReady = false;
 
 // ---------------------------------------------------------------------------
+// PORTABLE MODE — keep everything next to the .exe, leaving no trace elsewhere.
+// electron-builder's portable target sets PORTABLE_EXECUTABLE_DIR to the folder
+// the portable .exe was launched from. When present, relocate Electron's whole
+// userData tree (our SQLite DB, backups, SteamCMD, logs — plus Chromium's cache)
+// into a "PSM-Data" folder beside the .exe, so the app is fully self-contained.
+// The installed (NSIS) build has no such env var and keeps using %APPDATA%.
+// This must run before app is ready and before anything reads a user path.
+// ---------------------------------------------------------------------------
+if (process.env.PORTABLE_EXECUTABLE_DIR) {
+  const portableData = path.join(process.env.PORTABLE_EXECUTABLE_DIR, "PSM-Data");
+  try { fs.mkdirSync(portableData, { recursive: true }); } catch {}
+  try { app.setPath("userData", portableData); } catch {}
+}
+
+// ---------------------------------------------------------------------------
 // SINGLE INSTANCE LOCK — prevents the "infinite windows" cascade.
 // If a second copy launches, focus the existing window instead of spawning one.
 // ---------------------------------------------------------------------------
