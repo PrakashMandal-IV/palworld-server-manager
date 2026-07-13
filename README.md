@@ -40,6 +40,9 @@ a server (new or existing), and manage everything from a clean interface.
 - **Discord notifications** — post server events (start, stop, restart, crash, backup,
   update) to Discord and relay in-game chat. Add several webhook **channels** per world
   and route each event to whichever channel you want.
+- **Languages** — use the app in English, Spanish, Japanese, or Chinese, switched from
+  Settings and applied instantly. Install more community translation packs from GitHub
+  in one click, or bring your own — no restart needed.
 - **Customize** each world with a profile icon, banner, and accent color.
 - **Export / Import** settings and full world profiles as zip files, for sharing or
   moving between machines.
