@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, StatusChip, fmtUptime, fmtTime, toast } from "@/components/ui";
 import PlayersPanel from "@/components/PlayersPanel";
 import LogsPanel from "@/components/LogsPanel";
@@ -17,20 +18,23 @@ import BroadcastPanel from "@/components/BroadcastPanel";
 import DiscordPanel from "@/components/DiscordPanel";
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: "grid" },
-  { id: "players", label: "Players", icon: "users" },
-  { id: "broadcast", label: "Broadcast", icon: "bell" },
-  { id: "chat", label: "Chat", icon: "chat" },
-  { id: "console", label: "Console", icon: "terminal" },
-  { id: "settings", label: "Settings", icon: "settings" },
-  { id: "backups", label: "Backups", icon: "download" },
-  { id: "schedule", label: "Schedule", icon: "clock" },
-  { id: "mods", label: "Mods", icon: "shield" },
-  { id: "discord", label: "Discord", icon: "bell" },
-  { id: "admin", label: "Admin", icon: "settings" },
+  { id: "overview", labelKey: "world.tab.overview", icon: "grid" },
+  { id: "players", labelKey: "world.tab.players", icon: "users" },
+  { id: "broadcast", labelKey: "world.tab.broadcast", icon: "bell" },
+  { id: "chat", labelKey: "world.tab.chat", icon: "chat" },
+  { id: "console", labelKey: "world.tab.console", icon: "terminal" },
+  { id: "settings", labelKey: "world.tab.settings", icon: "settings" },
+  { id: "backups", labelKey: "world.tab.backups", icon: "download" },
+  { id: "schedule", labelKey: "world.tab.schedule", icon: "clock" },
+  { id: "mods", labelKey: "world.tab.mods", icon: "shield" },
+  { id: "discord", labelKey: "world.tab.discord", icon: "bell" },
+  { id: "admin", labelKey: "world.tab.admin", icon: "settings" },
 ];
 
+const ACTION_TOAST = { start: "toast.worldStarted", stop: "toast.worldStopped", restart: "toast.worldRestarted" };
+
 export default function WorldDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const router = useRouter();
   const [data, setData] = useState(null);
@@ -54,7 +58,7 @@ export default function WorldDetail() {
     setBusy(action);
     try {
       await api(`/api/worlds/${id}/action`, { method: "POST", body: { action } });
-      toast(`World ${action}ed`, "success");
+      toast(t(ACTION_TOAST[action] || "toast.worldStarted"), "success");
       setTimeout(load, 700);
     } catch (e) { toast(e.message, "error"); }
     finally { setBusy(null); }
@@ -65,7 +69,7 @@ export default function WorldDetail() {
     try {
       await api(`/api/worlds/${id}/update`, { method: "POST" });
       try { window.__palJobsPing?.(); } catch {}
-      toast("Update started — track progress in the downloads tray", "success");
+      toast(t("world.updateStarted"), "success");
       // reflect status changes as the background job runs
       setTimeout(load, 1200);
     } catch (e) { toast(e.message, "error"); }
@@ -73,13 +77,13 @@ export default function WorldDetail() {
   };
 
 
-  if (!data) return <div className="subtle" style={{ fontWeight: 700 }}>Loading…</div>;
+  if (!data) return <div className="subtle" style={{ fontWeight: 700 }}>{t("common.loading")}</div>;
   const { world, live, events, sessions, schedules, backups } = data;
   const running = world.running;
 
   return (
     <div>
-      <Link href="/" className="btn btn-ghost" style={{ marginBottom: "1rem" }}><Icon name="back" /> All worlds</Link>
+      <Link href="/" className="btn btn-ghost" style={{ marginBottom: "1rem" }}><Icon name="back" /> {t("world.allWorlds")}</Link>
 
       {/* Header */}
       <div className="panel" style={{ padding: 0, marginBottom: "1.2rem", overflow: "hidden", position: "relative", borderTop: `3px solid ${world.accent_color || "var(--accent)"}` }}>
@@ -101,34 +105,34 @@ export default function WorldDetail() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
               <h1 className="heading" style={{ fontSize: "1.6rem", margin: 0 }}>{world.display_name}</h1>
               <StatusChip status={world.status} running={running} />
-              {world.updateAvailable && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>Update available</span>}
+              {world.updateAvailable && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>{t("worlds.updateAvailable")}</span>}
             </div>
             <div className="subtle" style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: 3 }}>
               {live?.info?.servername || world.install_dir}
             </div>
           </div>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            <button className="btn btn-ghost" onClick={() => setCustomizing(true)} title="Customize"><Icon name="image" /> Customize</button>
+            <button className="btn btn-ghost" onClick={() => setCustomizing(true)} title={t("world.customize")}><Icon name="image" /> {t("world.customize")}</button>
             {running ? (
               <>
-                <button className="btn btn-ghost" disabled={busy} onClick={() => act("restart")}><Icon name="restart" /> Restart</button>
-                <button className="btn btn-danger" disabled={busy} onClick={() => act("stop")}><Icon name="stop" /> Stop</button>
+                <button className="btn btn-ghost" disabled={busy} onClick={() => act("restart")}><Icon name="restart" /> {t("common.restart")}</button>
+                <button className="btn btn-danger" disabled={busy} onClick={() => act("stop")}><Icon name="stop" /> {t("common.stop")}</button>
               </>
             ) : (
-              <button className="btn btn-primary" disabled={busy} onClick={() => act("start")}><Icon name="play" /> {busy === "start" ? "Starting…" : "Start"}</button>
+              <button className="btn btn-primary" disabled={busy} onClick={() => act("start")}><Icon name="play" /> {busy === "start" ? t("common.starting") : t("common.start")}</button>
             )}
-            <button className="btn btn-amber" disabled={busy || running || world.status === "updating"} onClick={doUpdate}><Icon name="download" /> {busy === "update" || world.status === "updating" ? "Updating…" : "Update"}</button>
+            <button className="btn btn-amber" disabled={busy || running || world.status === "updating"} onClick={doUpdate}><Icon name="download" /> {busy === "update" || world.status === "updating" ? t("common.updating") : t("common.update")}</button>
           </div>
         </div>
 
         {/* quick stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px,1fr))", gap: "0.8rem", marginTop: "1.1rem" }}>
-          <QuickStat label="Players" value={live?.metrics ? `${live.metrics.currentplayernum ?? live.players?.players?.length ?? 0}${live.metrics.maxplayernum ? "/" + live.metrics.maxplayernum : ""}` : "—"} />
-          <QuickStat label="Uptime" value={live?.metrics ? fmtUptime(live.metrics.uptime) : "—"} />
-          <QuickStat label="In-game day" value={live?.metrics?.days ?? "—"} />
-          <QuickStat label="Server FPS" value={live?.metrics?.serverfps ?? "—"} />
-          <QuickStat label="Build" value={world.build_id || live?.info?.version || "—"} />
-          <QuickStat label="Game port" value={world.game_port} />
+          <QuickStat label={t("common.players")} value={live?.metrics ? `${live.metrics.currentplayernum ?? live.players?.players?.length ?? 0}${live.metrics.maxplayernum ? "/" + live.metrics.maxplayernum : ""}` : "—"} />
+          <QuickStat label={t("common.uptime")} value={live?.metrics ? fmtUptime(live.metrics.uptime) : "—"} />
+          <QuickStat label={t("world.inGameDay")} value={live?.metrics?.days ?? "—"} />
+          <QuickStat label={t("world.serverFps")} value={live?.metrics?.serverfps ?? "—"} />
+          <QuickStat label={t("world.build")} value={world.build_id || live?.info?.version || "—"} />
+          <QuickStat label={t("world.gamePort")} value={world.game_port} />
         </div>
 
         {/* connection URL */}
@@ -138,9 +142,9 @@ export default function WorldDetail() {
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-        {TABS.map((t) => (
-          <button key={t.id} className={`btn ${tab === t.id ? "btn-primary" : "btn-ghost"}`} onClick={() => setTab(t.id)}>
-            <Icon name={t.icon} size={16} /> {t.label}
+        {TABS.map((tb) => (
+          <button key={tb.id} className={`btn ${tab === tb.id ? "btn-primary" : "btn-ghost"}`} onClick={() => setTab(tb.id)}>
+            <Icon name={tb.icon} size={16} /> {t(tb.labelKey)}
           </button>
         ))}
       </div>
@@ -157,7 +161,7 @@ export default function WorldDetail() {
         {tab === "mods" && (
           <div style={{ display: "grid", gap: "1.8rem" }}>
             <div>
-              <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>Steam Workshop mods</h3>
+              <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("world.modsWorkshop")}</h3>
               <ModsPanel worldId={id} running={running} />
             </div>
             <div style={{ borderTop: "1px solid var(--line)", paddingTop: "1.4rem" }}>
@@ -174,13 +178,14 @@ export default function WorldDetail() {
       )}
 
       {deleting && (
-        <DeleteWorldModal world={world} onClose={() => setDeleting(false)} onDeleted={() => { toast("World deleted", "success"); router.push("/"); }} />
+        <DeleteWorldModal world={world} onClose={() => setDeleting(false)} onDeleted={() => { toast(t("world.deleted"), "success"); router.push("/"); }} />
       )}
     </div>
   );
 }
 
 function DeleteWorldModal({ world, onClose, onDeleted }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState("profile"); // "profile" | "disk"
   const [confirmName, setConfirmName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -205,29 +210,29 @@ function DeleteWorldModal({ world, onClose, onDeleted }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "grid", placeItems: "center", zIndex: 60, padding: "1rem" }}>
       <div className="panel" style={{ width: "100%", maxWidth: 520, padding: "1.4rem" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
-          <h3 className="heading" style={{ fontSize: "1.15rem", margin: 0 }}>Delete “{world.display_name}”</h3>
+          <h3 className="heading" style={{ fontSize: "1.15rem", margin: 0 }}>{t("world.deleteTitle", { name: world.display_name })}</h3>
           <button className="btn btn-ghost" style={{ padding: "0.3rem 0.5rem" }} onClick={onClose}><Icon name="x" size={16} /></button>
         </div>
         <p className="subtle" style={{ fontWeight: 600, fontSize: "0.82rem", marginTop: 0 }}>
-          Choose what to remove. This cannot be undone.
+          {t("world.deleteIntro")}
         </p>
 
         <div style={{ display: "grid", gap: "0.6rem", margin: "1rem 0" }}>
           <DeleteOption
             active={mode === "profile"} onClick={() => setMode("profile")}
-            title="Delete profile only"
-            desc="Removes this world from the manager. Server files, saves, and mods on disk are kept — you can re-add the folder later." />
+            title={t("world.deleteProfileOnly")}
+            desc={t("world.deleteProfileOnlyDesc")} />
           <DeleteOption
             active={mode === "disk"} onClick={() => setMode("disk")}
             danger
-            title="Delete profile + server files on disk"
-            desc={`Permanently deletes the entire install folder (${world.install_dir}) including all saves and backups. There is no recovery.`} />
+            title={t("world.deleteWithFiles")}
+            desc={t("world.deleteWithFilesDesc", { dir: world.install_dir })} />
         </div>
 
         {withFiles && (
           <div style={{ marginBottom: "1rem" }}>
             <label className="label">
-              Type <b style={{ color: "var(--ink)" }}>{world.display_name}</b> to confirm permanent deletion
+              <Trans i18nKey="world.deleteConfirmLabel" values={{ name: world.display_name }} components={{ b: <b style={{ color: "var(--ink)" }} /> }} />
             </label>
             <input className="input" value={confirmName} onChange={(e) => setConfirmName(e.target.value)}
               placeholder={world.display_name} autoFocus
@@ -236,9 +241,9 @@ function DeleteWorldModal({ world, onClose, onDeleted }) {
         )}
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-          <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
+          <button className="btn btn-ghost" onClick={onClose} disabled={busy}>{t("common.cancel")}</button>
           <button className="btn btn-danger" onClick={doDelete} disabled={busy || !nameOk}>
-            <Icon name="trash" size={15} /> {busy ? "Deleting…" : withFiles ? "Delete everything" : "Delete profile"}
+            <Icon name="trash" size={15} /> {busy ? t("common.deleting") : withFiles ? t("world.deleteEverything") : t("world.deleteProfile")}
           </button>
         </div>
       </div>
@@ -280,6 +285,7 @@ function QuickStat({ label, value }) {
 }
 
 function ConnectionBar({ world }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(null);
   const [lan, setLan] = useState(null);
   const port = world.game_port;
@@ -295,31 +301,28 @@ function ConnectionBar({ world }) {
             because it's what most people actually want and dispels the idea that the
             server only listens on 127.0.0.1. */}
         {primaryLan && (
-          <ConnectRow label="Same network (LAN)" value={`${primaryLan.address}:${port}`} which="lan"
+          <ConnectRow label={t("world.lanLabel")} value={`${primaryLan.address}:${port}`} which="lan"
             copied={copied} onCopy={copy} accent />
         )}
         {/* This PC only — 127.0.0.1 works solely from the machine running the server. */}
-        <ConnectRow label="This PC only" value={`127.0.0.1:${port}`} which="local" copied={copied} onCopy={copy} />
+        <ConnectRow label={t("world.thisPcOnly")} value={`127.0.0.1:${port}`} which="local" copied={copied} onCopy={copy} />
         {lan && lan.length > 1 && (
           <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 600 }}>
-            Other network adapters:{" "}
+            {t("world.otherAdapters")}{" "}
             {lan.filter((a) => !a.primary).map((a) => `${a.address}`).join(", ")}
           </div>
         )}
         {lan && lan.length === 0 && (
           <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 600 }}>
-            No LAN address detected — the server still listens on all network adapters; use this PC&apos;s IP from your OS network settings.
+            {t("world.noLan")}
           </div>
         )}
       </div>
       <div className="subtle" style={{ fontSize: "0.72rem", fontWeight: 600, maxWidth: 320 }}>
-        In Palworld: <b>Join Multiplayer → Connect via IP</b> and paste an address above.
-        Players <b>on your network</b> use the <b>LAN</b> address; from this same PC use <b>127.0.0.1</b>.
-        The server isn&apos;t bound to any one address — it listens on every adapter on port {port}.
-        For friends <b>over the internet</b>, forward/tunnel UDP port {port} and share your public IP.
+        <Trans i18nKey="world.connectHelp" values={{ port }} components={{ b: <b /> }} />
         <div style={{ marginTop: 6 }}>
           <a href="/info" style={{ color: "var(--accent)", fontWeight: 700, textDecoration: "none" }}>
-            → Want friends to join over the internet? See the free playit.gg guide
+            {t("world.playitLink")}
           </a>
         </div>
       </div>
@@ -328,6 +331,7 @@ function ConnectionBar({ world }) {
 }
 
 function ConnectRow({ label, value, which, copied, onCopy, accent }) {
+  const { t } = useTranslation();
   return (
     <div className="panel-inset" style={{ display: "flex", alignItems: "center", gap: "0.7rem", padding: "0.55rem 0.9rem", borderLeft: accent ? "3px solid var(--accent)" : undefined }}>
       <Icon name="globe" size={16} />
@@ -336,19 +340,20 @@ function ConnectRow({ label, value, which, copied, onCopy, accent }) {
         <code style={{ fontSize: "0.95rem", fontWeight: 700 }}>{value}</code>
       </div>
       <button className="btn btn-ghost" style={{ marginLeft: "auto", padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={() => onCopy(value, which)}>
-        {copied === which ? "Copied!" : "Copy"}
+        {copied === which ? t("common.copied") : t("common.copy")}
       </button>
     </div>
   );
 }
 
 function Overview({ world, live, events, sessions, onDelete }) {
+  const { t } = useTranslation();
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.4rem" }}>
       <div>
-        <h3 className="heading" style={{ fontSize: "1rem", marginTop: 0 }}>Recent activity</h3>
+        <h3 className="heading" style={{ fontSize: "1rem", marginTop: 0 }}>{t("world.recentActivity")}</h3>
         <div style={{ display: "grid", gap: "0.35rem", maxHeight: 300, overflow: "auto" }}>
-          {events.length === 0 ? <p className="subtle" style={{ fontWeight: 700 }}>No events yet.</p> :
+          {events.length === 0 ? <p className="subtle" style={{ fontWeight: 700 }}>{t("world.noEvents")}</p> :
             events.map((e) => (
               <div key={e.id} className="panel-inset" style={{ padding: "0.45rem 0.7rem", fontSize: "0.8rem" }}>
                 <span className="chip" style={{ background: "var(--card-2)", border: "1px solid var(--line)", marginRight: 8 }}>{e.kind}</span>
@@ -359,9 +364,9 @@ function Overview({ world, live, events, sessions, onDelete }) {
         </div>
       </div>
       <div>
-        <h3 className="heading" style={{ fontSize: "1rem", marginTop: 0 }}>Join / leave history</h3>
+        <h3 className="heading" style={{ fontSize: "1rem", marginTop: 0 }}>{t("world.joinLeaveHistory")}</h3>
         <div style={{ display: "grid", gap: "0.35rem", maxHeight: 300, overflow: "auto" }}>
-          {sessions.length === 0 ? <p className="subtle" style={{ fontWeight: 700 }}>No sessions recorded yet.</p> :
+          {sessions.length === 0 ? <p className="subtle" style={{ fontWeight: 700 }}>{t("world.noSessions")}</p> :
             sessions.map((s) => (
               <div key={s.id} className="panel-inset" style={{ padding: "0.45rem 0.7rem", fontSize: "0.8rem", display: "flex", justifyContent: "space-between" }}>
                 <span style={{ fontWeight: 800 }}>
@@ -373,8 +378,8 @@ function Overview({ world, live, events, sessions, onDelete }) {
             ))}
         </div>
 
-        <h3 className="heading" style={{ fontSize: "1rem", marginTop: "1.4rem" }}>Danger zone</h3>
-        <button className="btn btn-danger" onClick={onDelete}><Icon name="trash" /> Delete world profile</button>
+        <h3 className="heading" style={{ fontSize: "1rem", marginTop: "1.4rem" }}>{t("world.dangerZone")}</h3>
+        <button className="btn btn-danger" onClick={onDelete}><Icon name="trash" /> {t("world.deleteProfile")}</button>
       </div>
     </div>
   );

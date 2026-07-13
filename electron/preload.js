@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld("desktop", {
   pickDirectory: () => ipcRenderer.invoke("pick-directory"),
   pickZip: () => ipcRenderer.invoke("pick-zip"),
   getSystemTheme: () => ipcRenderer.invoke("get-theme"),
+  getSystemLocale: () => ipcRenderer.invoke("get-system-locale"),
   openPath: (p) => ipcRenderer.invoke("open-path", p),
 });

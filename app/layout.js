@@ -1,6 +1,10 @@
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
+import I18nProvider from "@/components/I18nProvider";
 import Shell from "@/components/Shell";
+
+const dbm = require("@/lib/db");
+const { loadResources, languageMeta } = require("@/lib/i18n/loader");
 
 export const metadata = {
   title: "Palworld Server Manager",
@@ -11,8 +15,13 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // Resolve the chosen language server-side and SSR its dictionary into first paint,
+  // so non-English users never see a flash of untranslated English.
+  const lng = dbm.getSetting("language", "en") || "en";
+  const resources = loadResources(lng);
+  const { dir } = languageMeta(lng);
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={lng} dir={dir} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -28,9 +37,11 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <ThemeProvider>
-          <Shell>{children}</Shell>
-        </ThemeProvider>
+        <I18nProvider lng={lng} resources={resources}>
+          <ThemeProvider>
+            <Shell>{children}</Shell>
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );

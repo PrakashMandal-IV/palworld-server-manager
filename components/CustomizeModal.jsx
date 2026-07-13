@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
 
 // Resize/compress an image file to a data URL under a target size.
@@ -28,6 +29,7 @@ function fileToDataURL(file, maxDim, quality = 0.82) {
 }
 
 export default function CustomizeModal({ world, onClose, onDone }) {
+  const { t } = useTranslation();
   const downOnBackdrop = useRef(false);
   const [name, setName] = useState(world.display_name || "");
   const [icon, setIcon] = useState(world.icon_data || null);
@@ -37,11 +39,11 @@ export default function CustomizeModal({ world, onClose, onDone }) {
 
   const pickIcon = async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
-    try { setIcon(await fileToDataURL(f, 256, 0.85)); } catch { toast("Couldn't read image", "error"); }
+    try { setIcon(await fileToDataURL(f, 256, 0.85)); } catch { toast(t("customize.readError"), "error"); }
   };
   const pickBanner = async (e) => {
     const f = e.target.files?.[0]; if (!f) return;
-    try { setBanner(await fileToDataURL(f, 900, 0.8)); } catch { toast("Couldn't read image", "error"); }
+    try { setBanner(await fileToDataURL(f, 900, 0.8)); } catch { toast(t("customize.readError"), "error"); }
   };
 
   const save = async () => {
@@ -51,7 +53,7 @@ export default function CustomizeModal({ world, onClose, onDone }) {
         method: "POST",
         body: { display_name: name, icon_data: icon, banner_data: banner, accent_color: accent },
       });
-      toast("World customized", "success");
+      toast(t("customize.saved"), "success");
       onDone?.();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
@@ -72,44 +74,44 @@ export default function CustomizeModal({ world, onClose, onDone }) {
         </div>
 
         <div style={{ padding: "2rem 1.4rem 1.3rem" }}>
-          <label className="label">World name</label>
+          <label className="label">{t("customize.worldName")}</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} style={{ marginBottom: "1rem" }} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
             <div>
-              <label className="label">Profile icon</label>
+              <label className="label">{t("customize.profileIcon")}</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <label className="btn btn-ghost" style={{ cursor: "pointer", flex: 1 }}>
-                  <Icon name="upload" size={15} /> Upload
+                  <Icon name="upload" size={15} /> {t("customize.upload")}
                   <input type="file" accept="image/*" hidden onChange={pickIcon} />
                 </label>
-                {icon && <button className="btn btn-ghost" onClick={() => setIcon(null)} title="Remove"><Icon name="trash" size={15} /></button>}
+                {icon && <button className="btn btn-ghost" onClick={() => setIcon(null)} title={t("customize.removeTitle")}><Icon name="trash" size={15} /></button>}
               </div>
             </div>
             <div>
-              <label className="label">Banner</label>
+              <label className="label">{t("customize.banner")}</label>
               <div style={{ display: "flex", gap: 8 }}>
                 <label className="btn btn-ghost" style={{ cursor: "pointer", flex: 1 }}>
-                  <Icon name="upload" size={15} /> Upload
+                  <Icon name="upload" size={15} /> {t("customize.upload")}
                   <input type="file" accept="image/*" hidden onChange={pickBanner} />
                 </label>
-                {banner && <button className="btn btn-ghost" onClick={() => setBanner(null)} title="Remove"><Icon name="trash" size={15} /></button>}
+                {banner && <button className="btn btn-ghost" onClick={() => setBanner(null)} title={t("customize.removeTitle")}><Icon name="trash" size={15} /></button>}
               </div>
             </div>
           </div>
 
-          <label className="label">Accent color <span className="subtle" style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0 }}>— colors the card edge, page top bar & default avatar</span></label>
+          <label className="label">{t("customize.accentColor")} <span className="subtle" style={{ fontWeight: 600, textTransform: "none", letterSpacing: 0 }}>{t("customize.accentColorHint")}</span></label>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: "1.4rem" }}>
             <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ width: 48, height: 38, border: "1px solid var(--line)", borderRadius: 8, background: "none", cursor: "pointer" }} />
             <code style={{ fontWeight: 700 }}>{accent}</code>
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.6rem" }}>
-            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="btn btn-primary" onClick={save} disabled={saving}><Icon name="download" /> {saving ? "Saving…" : "Save"}</button>
+            <button className="btn btn-ghost" onClick={onClose}>{t("customize.cancel")}</button>
+            <button className="btn btn-primary" onClick={save} disabled={saving}><Icon name="download" /> {saving ? t("customize.saving") : t("customize.save")}</button>
           </div>
           <p className="subtle" style={{ fontSize: "0.7rem", fontWeight: 600, marginTop: 10, marginBottom: 0 }}>
-            Images are resized automatically to keep things light. Banner shows on the world card (fading in from the right) and at the top of this world's page.
+            {t("customize.footer")}
           </p>
         </div>
       </div>

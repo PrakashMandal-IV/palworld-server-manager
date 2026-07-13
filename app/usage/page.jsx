@@ -6,12 +6,14 @@
 //
 // Author: Prakash Mandal <prakashmandal.iv@gmail.com>
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon, fmtBytes } from "@/components/ui";
 
 // Distinct, colour-blind-friendly series palette (stable per world index).
 const PALETTE = ["#6c8cff", "#ffb454", "#4ec9a3", "#e06c9f", "#c792ea", "#f07178", "#7fdbca", "#ffd479"];
 
 export default function UsagePage() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [selected, setSelected] = useState("all");   // "all" | world_id
   const [loading, setLoading] = useState(true);
@@ -22,7 +24,7 @@ export default function UsagePage() {
       const r = await fetch("/api/metrics", { cache: "no-store" });
       const d = await r.json();
       if (d.ok) { setData(d); setErr(null); }
-      else setErr(d.error || "Failed to load metrics");
+      else setErr(d.error || t("usage.metricsError"));
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
   }, []);
@@ -51,17 +53,17 @@ export default function UsagePage() {
     <div>
       <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: "1.2rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 className="heading" style={{ fontSize: "1.9rem", margin: 0 }}>Usage</h1>
+          <h1 className="heading" style={{ fontSize: "1.9rem", margin: 0 }}>{t("usage.title")}</h1>
           <p className="subtle" style={{ margin: "0.2rem 0 0", fontWeight: 700 }}>
-            Live CPU &amp; memory for running worlds · {data?.ncpu ?? "—"} cores · sampled every {Math.round((data?.sampleMs || 4000) / 1000)}s
+            {t("usage.subtitle", { cores: data?.ncpu ?? "—", sec: Math.round((data?.sampleMs || 4000) / 1000) })}
           </p>
         </div>
         {items.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <span className="subtle" style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" }}>Scope</span>
+            <span className="subtle" style={{ fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" }}>{t("common.scope")}</span>
             <select className="input" value={selected} onChange={(e) => setSelected(e.target.value)}
               style={{ padding: "0.45rem 0.6rem", minWidth: 200, fontWeight: 700 }}>
-              <option value="all">All running worlds</option>
+              <option value="all">{t("usage.allRunning")}</option>
               {items.map((i) => <option key={i.world_id} value={i.world_id}>{i.name}</option>)}
             </select>
           </div>
@@ -69,7 +71,7 @@ export default function UsagePage() {
       </header>
 
       {loading ? (
-        <div className="panel" style={{ padding: "2rem", textAlign: "center" }}><span className="subtle">Loading…</span></div>
+        <div className="panel" style={{ padding: "2rem", textAlign: "center" }}><span className="subtle">{t("common.loading")}</span></div>
       ) : err ? (
         <div className="panel" style={{ padding: "1.4rem", borderLeft: "3px solid var(--red)" }}><span style={{ fontWeight: 700 }}>{err}</span></div>
       ) : items.length === 0 ? (
@@ -86,6 +88,7 @@ export default function UsagePage() {
 /* ------------------------------- Views ---------------------------------- */
 
 function AllView({ data, colorFor }) {
+  const { t } = useTranslation();
   const { items, total, totalMemMB } = data;
   const cpuSeries = items.map((i) => ({ name: i.name, color: colorFor.get(i.world_id), points: i.history.map((h) => ({ t: h.t, v: h.cpu })) }));
   const ramSeries = items.map((i) => ({ name: i.name, color: colorFor.get(i.world_id), points: i.history.map((h) => ({ t: h.t, v: h.rssMB })) }));
@@ -93,26 +96,26 @@ function AllView({ data, colorFor }) {
   return (
     <div style={{ display: "grid", gap: "1.1rem" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.8rem" }}>
-        <StatTile label="Total CPU" value={`${total.cpu}%`} sub={`of ${data.ncpu} cores`} accent="var(--accent)" />
-        <StatTile label="Total memory" value={fmtBytes(total.rssMB * 1024 * 1024)} sub={`of ${fmtBytes(totalMemMB * 1024 * 1024)}`} accent="var(--green-bright)" />
-        <StatTile label="Worlds running" value={total.worlds} sub="live processes" accent="var(--yellow)" />
+        <StatTile label={t("usage.totalCpu")} value={`${total.cpu}%`} sub={t("usage.ofCores", { n: data.ncpu })} accent="var(--accent)" />
+        <StatTile label={t("usage.totalMemory")} value={fmtBytes(total.rssMB * 1024 * 1024)} sub={t("usage.ofMemory", { total: fmtBytes(totalMemMB * 1024 * 1024) })} accent="var(--green-bright)" />
+        <StatTile label={t("usage.worldsRunning")} value={total.worlds} sub={t("usage.liveProcesses")} accent="var(--yellow)" />
       </div>
 
-      <Card title="CPU over time" hint="% of total machine">
+      <Card title={t("usage.cpuOverTime")} hint={t("usage.pctOfMachine")}>
         <LineChart series={cpuSeries} unit="%" fixedMax={niceMax(Math.max(5, ...cpuSeries.flatMap((s) => s.points.map((p) => p.v)), 0))} />
         <Legend series={cpuSeries} />
       </Card>
 
-      <Card title="Memory over time" hint="working set">
+      <Card title={t("usage.memOverTime")} hint={t("usage.workingSet")}>
         <LineChart series={ramSeries} unit="MB" format={(v) => fmtBytes(v * 1024 * 1024)} />
         <Legend series={ramSeries} />
       </Card>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.1rem" }}>
-        <Card title="CPU by world" hint="current">
+        <Card title={t("usage.cpuByWorld")} hint={t("common.current")}>
           <BarChart items={items.map((i) => ({ name: i.name, value: i.cpu, color: colorFor.get(i.world_id), label: `${i.cpu}%` }))} max={niceMax(Math.max(5, ...items.map((i) => i.cpu)))} />
         </Card>
-        <Card title="Memory by world" hint="current">
+        <Card title={t("usage.memByWorld")} hint={t("common.current")}>
           <BarChart items={items.map((i) => ({ name: i.name, value: i.rssMB, color: colorFor.get(i.world_id), label: fmtBytes(i.rssMB * 1024 * 1024) }))} max={niceMax(Math.max(64, ...items.map((i) => i.rssMB)))} />
         </Card>
       </div>
@@ -121,6 +124,7 @@ function AllView({ data, colorFor }) {
 }
 
 function SingleView({ item, totalMemMB, ncpu, color }) {
+  const { t } = useTranslation();
   const cpuSeries = [{ name: item.name, color, points: item.history.map((h) => ({ t: h.t, v: h.cpu })) }];
   const ramSeries = [{ name: item.name, color, points: item.history.map((h) => ({ t: h.t, v: h.rssMB })) }];
   const peakCpu = Math.max(0, ...item.history.map((h) => h.cpu));
@@ -129,16 +133,16 @@ function SingleView({ item, totalMemMB, ncpu, color }) {
   return (
     <div style={{ display: "grid", gap: "1.1rem" }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.8rem" }}>
-        <StatTile label="CPU now" value={`${item.cpu}%`} sub={`peak ${Math.round(peakCpu * 10) / 10}% · ${ncpu} cores`} accent="var(--accent)" />
-        <StatTile label="Memory now" value={fmtBytes(item.rssMB * 1024 * 1024)} sub={`peak ${fmtBytes(peakRam * 1024 * 1024)}`} accent="var(--green-bright)" />
-        <StatTile label="Processes" value={item.pids} sub="in server tree" accent="var(--yellow)" />
+        <StatTile label={t("usage.cpuNow")} value={`${item.cpu}%`} sub={t("usage.peakCpu", { peak: Math.round(peakCpu * 10) / 10, cores: ncpu })} accent="var(--accent)" />
+        <StatTile label={t("usage.memNow")} value={fmtBytes(item.rssMB * 1024 * 1024)} sub={t("usage.peakMem", { peak: fmtBytes(peakRam * 1024 * 1024) })} accent="var(--green-bright)" />
+        <StatTile label={t("usage.processes")} value={item.pids} sub={t("usage.inServerTree")} accent="var(--yellow)" />
       </div>
 
-      <Card title="CPU over time" hint="% of total machine">
+      <Card title={t("usage.cpuOverTime")} hint={t("usage.pctOfMachine")}>
         <LineChart series={cpuSeries} unit="%" area fixedMax={niceMax(Math.max(5, peakCpu))} />
       </Card>
 
-      <Card title="Memory over time" hint="working set">
+      <Card title={t("usage.memOverTime")} hint={t("usage.workingSet")}>
         <LineChart series={ramSeries} unit="MB" area format={(v) => fmtBytes(v * 1024 * 1024)} />
       </Card>
     </div>
@@ -149,6 +153,7 @@ function SingleView({ item, totalMemMB, ncpu, color }) {
 
 // Shared SVG line chart. `series`: [{ name, color, points:[{t,v}] }].
 function LineChart({ series, unit = "", area = false, fixedMax = null, format }) {
+  const { t } = useTranslation();
   const W = 720, H = 220, padL = 46, padR = 12, padT = 12, padB = 22;
   const all = series.flatMap((s) => s.points);
   const hasData = all.length > 0;
@@ -182,7 +187,7 @@ function LineChart({ series, unit = "", area = false, fixedMax = null, format })
         })}
 
         {!hasData && (
-          <text x={W / 2} y={H / 2} textAnchor="middle" fontSize="12" fill="var(--ink-soft)" fontWeight="700">Collecting samples…</text>
+          <text x={W / 2} y={H / 2} textAnchor="middle" fontSize="12" fill="var(--ink-soft)" fontWeight="700">{t("usage.collecting")}</text>
         )}
 
         {series.map((s, si) => {
@@ -260,14 +265,15 @@ function Legend({ series }) {
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="panel" style={{ padding: "3rem 2rem", textAlign: "center" }}>
       <div style={{ width: 66, height: 66, borderRadius: 8, background: "var(--card-2)", display: "grid", placeItems: "center", margin: "0 auto 1rem", color: "var(--ink-soft)" }}>
         <Icon name="activity" size={34} />
       </div>
-      <h2 className="heading" style={{ fontSize: "1.4rem", margin: "0 0 0.4rem" }}>No worlds running</h2>
+      <h2 className="heading" style={{ fontSize: "1.4rem", margin: "0 0 0.4rem" }}>{t("usage.emptyTitle")}</h2>
       <p className="subtle" style={{ fontWeight: 700, maxWidth: 460, margin: "0 auto" }}>
-        Start a world to see live CPU and memory usage graphed here. Metrics are sampled across each server's full process tree.
+        {t("usage.emptyBody")}
       </p>
     </div>
   );

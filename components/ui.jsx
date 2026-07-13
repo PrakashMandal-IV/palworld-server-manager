@@ -1,4 +1,5 @@
 "use client";
+import { useTranslation } from "react-i18next";
 
 export async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -35,15 +36,12 @@ export function fmtTime(ts) {
 }
 
 export function StatusChip({ status, running }) {
+  const { t } = useTranslation();
   const s = running && status === "running" ? "running" : status;
-  const labelMap = {
-    running: "Running", stopped: "Stopped", crashed: "Crashed",
-    updating: "Updating", starting: "Starting", stopping: "Stopping",
-  };
   return (
     <span className="chip" style={{ background: "var(--card-2)", border: "1px solid var(--line)" }}>
       <span className={`statdot bg-${s} ${s === "running" ? "animate-pulseDot" : ""}`} />
-      <span className={`s-${s}`}>{labelMap[s] || s}</span>
+      <span className={`s-${s}`}>{t(`status.${s}`, { defaultValue: s })}</span>
     </span>
   );
 }

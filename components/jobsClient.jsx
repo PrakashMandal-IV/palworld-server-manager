@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Icon } from "@/components/ui";
 
 // Shared client helpers for the downloads/updates system: a polling hook used by
@@ -54,13 +55,15 @@ export function ProgressBar({ percent, style }) {
 }
 
 export function JobCard({ job, onDismiss }) {
+  const { t } = useTranslation();
   const [showLog, setShowLog] = useState(false);
   const logRef = useRef(null);
   useEffect(() => { if (showLog && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [job.lines, showLog]);
 
   const color = job.status === "error" ? "var(--red)" : job.status === "success" ? "var(--green-bright)" : "var(--accent)";
   const running = job.status === "running";
-  const typeLabel = job.type === "install" ? "Install" : "Update";
+  const typeLabel = t(job.type === "install" ? "job.install" : "job.update");
+  const cardLabel = job.worldName || t(job.type === "install" ? "job.newServer" : "job.serverUpdate");
 
   return (
     <div className="panel-inset" style={{ padding: "0.9rem 1rem", borderLeft: `3px solid ${color}` }}>
@@ -70,16 +73,16 @@ export function JobCard({ job, onDismiss }) {
         </span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <span style={{ fontWeight: 700, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{labelFor(job)}</span>
+            <span style={{ fontWeight: 700, fontSize: "0.92rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{cardLabel}</span>
             <span className="subtle" style={{ fontSize: "0.68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em" }}>{typeLabel}</span>
           </div>
           <div className="subtle" style={{ fontSize: "0.78rem", fontWeight: 600 }}>
-            {running ? (job.message || phaseLabel(job.phase)) : (job.status === "success" ? "Completed" : (job.error || "Failed"))}
+            {running ? (job.message || t(`job.phase.${job.phase}`, { defaultValue: phaseLabel(job.phase) })) : (job.status === "success" ? t("job.completed") : (job.error || t("job.failed")))}
           </div>
         </div>
         {running && job.percent != null && <span style={{ fontSize: "0.9rem", fontWeight: 800, color }}>{job.percent}%</span>}
         {!running && onDismiss && (
-          <button onClick={onDismiss} title="Dismiss" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 3, display: "grid", placeItems: "center" }}>
+          <button onClick={onDismiss} title={t("common.dismiss")} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 3, display: "grid", placeItems: "center" }}>
             <Icon name="x" size={16} />
           </button>
         )}
@@ -87,14 +90,14 @@ export function JobCard({ job, onDismiss }) {
       {running && <ProgressBar percent={job.percent} style={{ marginTop: "0.7rem" }} />}
       <div style={{ marginTop: 8, display: "flex", gap: "0.8rem", alignItems: "center" }}>
         <button onClick={() => setShowLog((s) => !s)} className="subtle" style={{ background: "transparent", border: "none", cursor: "pointer", fontSize: "0.72rem", fontWeight: 700, padding: 0 }}>
-          {showLog ? "Hide log" : "Show log"}
+          {showLog ? t("job.hideLog") : t("job.showLog")}
         </button>
         {job.startedAt && <span className="subtle" style={{ fontSize: "0.7rem", fontWeight: 600 }}>{new Date(job.startedAt).toLocaleTimeString()}</span>}
       </div>
       {showLog && (
         <div ref={logRef} className="console" style={{ height: 200, marginTop: 8 }}>
           {(job.lines || []).length === 0
-            ? <div className="ln subtle">Waiting for output…</div>
+            ? <div className="ln subtle">{t("job.waiting")}</div>
             : job.lines.map((l, i) => <div key={i} className="ln">{l}</div>)}
         </div>
       )}

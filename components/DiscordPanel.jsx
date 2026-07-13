@@ -1,21 +1,13 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
 import { normalizeDiscord, ROUTE_KINDS, MAX_HOOKS } from "@/lib/discord-routing";
-
-const KIND_LABELS = {
-  start: "Server started",
-  stop: "Server stopped",
-  restart: "Server restarted",
-  crash: "Server crashed",
-  backup: "Backup created",
-  update: "Server updated",
-  chat: "In-game chat relay",
-};
 
 const newId = () => `h_${Math.random().toString(36).slice(2, 9)}`;
 
 export default function DiscordPanel({ world, onChange }) {
+  const { t } = useTranslation();
   const initial = useMemo(
     () => normalizeDiscord(world),
     [world.discord_webhooks, world.discord_webhook, world.notify_events, world.discord_relay_chat]
@@ -49,7 +41,7 @@ export default function DiscordPanel({ world, onChange }) {
     setTestingId(hook.id);
     try {
       await api("/api/settings/test-notify", { method: "POST", body: { webhook: hook.url.trim() } });
-      toast("Test message sent — check that Discord channel", "success");
+      toast(t("discord.testSent"), "success");
     } catch (e) { toast(e.message, "error"); }
     finally { setTestingId(null); }
   };
@@ -59,7 +51,7 @@ export default function DiscordPanel({ world, onChange }) {
     try {
       // Trim, and drop empty channels nothing routes to; clear routes to dropped ones.
       const cleanedHooks = hooks
-        .map((h) => ({ id: h.id, name: h.name.trim() || "Webhook", url: h.url.trim() }))
+        .map((h) => ({ id: h.id, name: h.name.trim() || t("discord.webhookFallback"), url: h.url.trim() }))
         .filter((h) => h.url || ROUTE_KINDS.some((k) => routes[k] === h.id));
       const validIds = new Set(cleanedHooks.map((h) => h.id));
       const cleanedRoutes = {};
@@ -68,7 +60,7 @@ export default function DiscordPanel({ world, onChange }) {
         method: "PATCH",
         body: { discord_webhooks: { hooks: cleanedHooks, routes: cleanedRoutes } },
       });
-      toast("Discord settings saved", "success");
+      toast(t("discord.saved"), "success");
       onChange?.();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
@@ -79,20 +71,18 @@ export default function DiscordPanel({ world, onChange }) {
   return (
     <div style={{ display: "grid", gap: "1.4rem" }}>
       <section>
-        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>Discord notifications</h3>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("discord.notificationsTitle")}</h3>
         <p className="subtle" style={{ fontWeight: 600, fontSize: "0.82rem", marginTop: 0, marginBottom: "0.9rem" }}>
-          Add one or more Discord webhook channels for this world, then choose which channel each
-          event posts to below — e.g. a <b>Status</b> channel for start/stop/crash, a separate
-          <b> Backup</b> channel, and a <b>Chat</b> channel for the in-game relay.
+          <Trans i18nKey="discord.notificationsDesc" components={{ b: <b /> }} />
         </p>
 
         {/* ---- Webhook channels ---- */}
-        <label className="label">Webhook channels</label>
+        <label className="label">{t("discord.channels")}</label>
         <div style={{ display: "grid", gap: "0.6rem" }}>
           {hooks.length === 0 && (
             <div className="panel-inset" style={{ padding: "0.9rem 1.1rem" }}>
               <span className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem" }}>
-                No channels yet. Add one to start posting notifications.
+                {t("discord.noChannels")}
               </span>
             </div>
           )}
@@ -100,16 +90,16 @@ export default function DiscordPanel({ world, onChange }) {
             <div key={h.id} className="panel-inset" style={{ padding: "0.7rem 0.9rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
               <input
                 className="input" value={h.name} onChange={(e) => patchHook(h.id, { name: e.target.value })}
-                placeholder="Channel name" style={{ width: 150 }} aria-label="Channel name" />
+                placeholder={t("discord.channelNamePlaceholder")} style={{ width: 150 }} aria-label={t("discord.channelNamePlaceholder")} />
               <input
                 className="input" value={h.url} onChange={(e) => patchHook(h.id, { url: e.target.value })}
-                placeholder="https://discord.com/api/webhooks/…" style={{ flex: 1, minWidth: 240 }} aria-label="Webhook URL" />
+                placeholder="https://discord.com/api/webhooks/…" style={{ flex: 1, minWidth: 240 }} aria-label={t("discord.webhookUrl")} />
               <button className="btn btn-ghost" style={{ padding: "0.4rem 0.7rem" }}
                 onClick={() => sendTest(h)} disabled={testingId === h.id || !h.url.trim()}>
-                {testingId === h.id ? "Sending…" : "Test"}
+                {testingId === h.id ? t("discord.sending") : t("discord.test")}
               </button>
               <button className="btn btn-danger" style={{ padding: "0.4rem 0.55rem" }}
-                onClick={() => removeHook(h.id)} title="Remove channel" aria-label="Remove channel">
+                onClick={() => removeHook(h.id)} title={t("discord.removeChannel")} aria-label={t("discord.removeChannel")}>
                 <Icon name="trash" size={14} />
               </button>
             </div>
@@ -117,43 +107,44 @@ export default function DiscordPanel({ world, onChange }) {
         </div>
         <button className="btn btn-ghost" style={{ marginTop: "0.6rem", padding: "0.4rem 0.8rem" }}
           onClick={addHook} disabled={hooks.length >= MAX_HOOKS}>
-          <Icon name="plus" size={15} /> Add channel
+          <Icon name="plus" size={15} /> {t("discord.addChannel")}
         </button>
         {hooks.length >= MAX_HOOKS && (
-          <span className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", marginLeft: 8 }}>Maximum of {MAX_HOOKS} channels.</span>
+          <span className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", marginLeft: 8 }}>{t("discord.maxChannels", { max: MAX_HOOKS })}</span>
         )}
       </section>
 
       {/* ---- Per-event routing ---- */}
       <section>
-        <label className="label">Route events</label>
+        <label className="label">{t("discord.routeEvents")}</label>
         <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", marginTop: 0, marginBottom: "0.7rem" }}>
-          Pick the channel each event posts to, or <b>Don&apos;t send</b> to mute it.
+          <Trans i18nKey="discord.routeDesc" components={{ b: <b /> }} />
         </p>
         <div style={{ display: "grid", gap: "0.4rem" }}>
           {ROUTE_KINDS.map((k) => {
             const routed = routes[k];
             const missingUrl = routed && !(hookById(routed)?.url || "").trim();
+            const kindLabel = t(`discord.kind.${k}`);
             return (
               <div key={k} className="panel-inset" style={{ padding: "0.55rem 0.9rem", display: "flex", alignItems: "center", gap: "0.8rem", flexWrap: "wrap" }}>
                 <div style={{ minWidth: 150, flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "0.84rem" }}>{KIND_LABELS[k]}</div>
+                  <div style={{ fontWeight: 700, fontSize: "0.84rem" }}>{kindLabel}</div>
                   {k === "chat" && (
                     <div className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem" }}>
-                      Needs the chat relay mod installed on the <b>Chat</b> tab.
+                      <Trans i18nKey="discord.chatNeedsMod" components={{ b: <b /> }} />
                     </div>
                   )}
                   {missingUrl && (
                     <div style={{ color: "var(--yellow)", fontWeight: 700, fontSize: "0.72rem" }}>
-                      This channel has no webhook URL — nothing will be sent.
+                      {t("discord.channelNoUrl")}
                     </div>
                   )}
                 </div>
                 <select className="input" style={{ width: 200 }} value={routed}
-                  onChange={(e) => setRoute(k, e.target.value)} aria-label={`Channel for ${KIND_LABELS[k]}`}>
-                  <option value="">Don&apos;t send</option>
+                  onChange={(e) => setRoute(k, e.target.value)} aria-label={t("discord.channelForAria", { event: kindLabel })}>
+                  <option value="">{t("discord.dontSend")}</option>
                   {hooks.map((h) => (
-                    <option key={h.id} value={h.id}>{h.name.trim() || "Webhook"}</option>
+                    <option key={h.id} value={h.id}>{h.name.trim() || t("discord.webhookFallback")}</option>
                   ))}
                 </select>
               </div>
@@ -169,12 +160,12 @@ export default function DiscordPanel({ world, onChange }) {
         borderLeft: `3px solid ${dirty ? "var(--yellow)" : "var(--line)"}`,
       }}>
         <span style={{ fontWeight: 700, fontSize: "0.82rem" }} className={dirty ? "" : "subtle"}>
-          {dirty ? "● You have unsaved changes" : "All changes saved"}
+          {dirty ? t("discord.unsavedChanges") : t("discord.allSaved")}
         </span>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button className="btn btn-ghost" onClick={discard} disabled={!dirty || saving}>Discard</button>
+          <button className="btn btn-ghost" onClick={discard} disabled={!dirty || saving}>{t("discord.discard")}</button>
           <button className="btn btn-primary" onClick={save} disabled={!dirty || saving}>
-            <Icon name="download" size={16} /> {saving ? "Saving…" : "Save changes"}
+            <Icon name="download" size={16} /> {saving ? t("discord.saving") : t("discord.saveChanges")}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
 import IniEditor from "@/components/IniEditor";
 
@@ -32,6 +33,7 @@ function encode(type, val) {
 }
 
 export default function SettingsEditor({ worldId, world, running, onGoToAdmin }) {
+  const { t } = useTranslation();
   const [iniOpen, setIniOpen] = useState(false);
   const [groups, setGroups] = useState(null);
   const [saved, setSaved] = useState({});      // typed values reflecting the ini on disk
@@ -80,13 +82,13 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
   }, [groups]);
 
   const save = async () => {
-    if (changedKeys.length === 0) { toast("No changes to save", "info"); return; }
+    if (changedKeys.length === 0) { toast(t("editor.noChanges"), "info"); return; }
     setSaving(true);
     try {
       const changed = {};
       for (const k of changedKeys) changed[k] = encode(fieldType[k], draft[k]);
       const r = await api(`/api/worlds/${worldId}/settings`, { method: "POST", body: { changed } });
-      toast(`Saved ${changedKeys.length} change(s) — restart to apply.`, "success");
+      toast(t("editor.savedChanges", { count: changedKeys.length }), "success");
       await load();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
@@ -94,7 +96,7 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
 
   const setVal = (key, val) => {
     setDraft((d) => ({ ...d, [key]: val }));
-    setTouched((t) => new Set(t).add(key));
+    setTouched((prev) => new Set(prev).add(key));
   };
 
   // Export current settings as a downloaded zip (saved to the browser's default
@@ -104,7 +106,7 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
     a.href = `/api/worlds/${worldId}/settings/export`;
     a.download = "";
     document.body.appendChild(a); a.click(); a.remove();
-    toast("Exporting settings…", "info");
+    toast(t("editor.exporting"), "info");
   };
 
   const importSettings = async (e) => {
@@ -113,7 +115,7 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
       const buf = await file.arrayBuffer();
       const zipBase64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
       const r = await api(`/api/worlds/${worldId}/settings/import`, { method: "POST", body: { zipBase64 } });
-      toast(`Imported ${r.applied} settings — restart to apply.`, "success");
+      toast(t("editor.imported", { count: r.applied }), "success");
       await load();
     } catch (err) { toast(err.message, "error"); }
     finally { e.target.value = ""; }
@@ -123,12 +125,12 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
     const preset = PRESETS[name];
     if (!preset) return;
     setDraft((d) => ({ ...d, ...preset }));
-    setTouched((t) => { const n = new Set(t); for (const k of Object.keys(preset)) n.add(k); return n; });
-    toast(`Applied "${name}" preset — review and Save changes.`, "info");
+    setTouched((prev) => { const n = new Set(prev); for (const k of Object.keys(preset)) n.add(k); return n; });
+    toast(t("editor.presetApplied", { name }), "info");
   };
   const resetField = (f) => setDraft((d) => ({ ...d, [f.key]: saved[f.key] })); // revert to disk value
 
-  if (!groups) return <p className="subtle" style={{ fontWeight: 600 }}>Loading settings…</p>;
+  if (!groups) return <p className="subtle" style={{ fontWeight: 600 }}>{t("editor.loading")}</p>;
 
   const filtering = search.trim().length > 0;
   const q = search.toLowerCase();
@@ -138,19 +140,21 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
 
   return (
     <div>
-      {!exists && <Notice color="var(--yellow)">No settings file yet — showing defaults. Saving will create PalWorldSettings.ini.</Notice>}
+      {!exists && <Notice color="var(--yellow)">{t("editor.noFileNotice")}</Notice>}
       <Notice color="var(--accent)">
-        <Icon name="clock" size={14} /> Only the settings you change are written — everything else keeps Palworld's own value. Changes apply after a <b>restart</b>.
+        <Icon name="clock" size={14} /> <Trans i18nKey="editor.onlyChangedNotice" components={{ b: <b /> }} />
       </Notice>
       {changedKeys.length > 0 && (
         <Notice color="var(--green)">
-          <b>{changedKeys.length}</b> unsaved change{changedKeys.length > 1 ? "s" : ""}: {changedKeys.slice(0, 6).join(", ")}{changedKeys.length > 6 ? "…" : ""}
+          <Trans i18nKey="editor.unsavedNotice" count={changedKeys.length}
+            values={{ keys: changedKeys.slice(0, 6).join(", ") + (changedKeys.length > 6 ? "…" : "") }}
+            components={{ b: <b /> }} />
         </Notice>
       )}
 
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-        <input className="input" placeholder="Search settings…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 240 }} />
-        <span className="subtle" style={{ fontSize: "0.72rem", fontWeight: 700 }}>Presets:</span>
+        <input className="input" placeholder={t("editor.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth: 240 }} />
+        <span className="subtle" style={{ fontSize: "0.72rem", fontWeight: 700 }}>{t("editor.presets")}</span>
         {Object.keys(PRESETS).map((name) => (
           <button key={name} className="btn btn-subtle" style={{ padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={() => applyPreset(name)}>
             {name}
@@ -158,10 +162,10 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
         ))}
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.4rem" }}>
           <button className="btn btn-ghost" style={{ padding: "0.35rem 0.7rem", fontSize: "0.78rem" }} onClick={exportSettings}>
-            <Icon name="upload" size={14} /> Export
+            <Icon name="upload" size={14} /> {t("editor.export")}
           </button>
           <label className="btn btn-ghost" style={{ padding: "0.35rem 0.7rem", fontSize: "0.78rem", cursor: "pointer" }}>
-            <Icon name="download" size={14} /> Import
+            <Icon name="download" size={14} /> {t("editor.import")}
             <input type="file" accept=".zip" hidden onChange={importSettings} />
           </label>
         </div>
@@ -185,10 +189,10 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
               user to turn that on — but only while it's still off. */}
           {g.title === "Server Identity" && world && !world.community_server && (
             <Notice color="var(--yellow)">
-              <Icon name="alert" size={14} /> Public IP/port only work once this server is listed. Turn on <b>Community server</b> in Admin.
+              <Icon name="alert" size={14} /> <Trans i18nKey="editor.communityNotice" components={{ b: <b /> }} />
               {onGoToAdmin && (
                 <button className="btn btn-subtle" style={{ padding: "0.2rem 0.6rem", fontSize: "0.74rem", marginLeft: "auto" }} onClick={onGoToAdmin}>
-                  Go to Admin
+                  {t("editor.goToAdmin")}
                 </button>
               )}
             </Notice>
@@ -202,19 +206,19 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
                   <label className="label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
                     <span title={f.key}>
                       {f.label}
-                      {!isSet && <span className="subtle" style={{ fontWeight: 700, fontSize: "0.6rem", marginLeft: 5 }} title="Not written in your ini — using Palworld default">default</span>}
+                      {!isSet && <span className="subtle" style={{ fontWeight: 700, fontSize: "0.6rem", marginLeft: 5 }} title={t("editor.defaultTitle")}>{t("editor.default")}</span>}
                     </span>
                     {isChanged && (
-                      <button onClick={() => resetField(f)} title="Revert to saved value"
+                      <button onClick={() => resetField(f)} title={t("editor.revertTitle")}
                         style={{ background: "none", border: "none", cursor: "pointer", color: "var(--green)", fontSize: "0.62rem", fontWeight: 800, padding: 0 }}>
-                        revert
+                        {t("editor.revert")}
                       </button>
                     )}
                   </label>
                   {f.type === "bool" ? (
                     <div style={{ display: "flex", gap: 4 }}>
-                      <button className={`btn ${draft[f.key] === false ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setVal(f.key, false)}>Off</button>
-                      <button className={`btn ${draft[f.key] === true ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setVal(f.key, true)}>On</button>
+                      <button className={`btn ${draft[f.key] === false ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setVal(f.key, false)}>{t("editor.off")}</button>
+                      <button className={`btn ${draft[f.key] === true ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setVal(f.key, true)}>{t("editor.on")}</button>
                     </div>
                   ) : f.type === "select" ? (
                     <select className="input" value={draft[f.key] ?? f.default} onChange={(e) => setVal(f.key, e.target.value)}>
@@ -246,16 +250,16 @@ export default function SettingsEditor({ worldId, world, running, onGoToAdmin })
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1.4rem", gap: "0.6rem", position: "sticky", bottom: 0, background: "var(--card)", paddingTop: "0.8rem" }}>
         <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
-          {changedKeys.length > 0 ? `${changedKeys.length} change(s) pending` : "No changes"}
+          {changedKeys.length > 0 ? t("editor.changesPending", { count: changedKeys.length }) : t("editor.noChangesLabel")}
         </span>
         <div style={{ display: "flex", gap: "0.6rem" }}>
-          <button className="btn btn-ghost" onClick={() => setDraft(saved)} disabled={changedKeys.length === 0}>Discard</button>
+          <button className="btn btn-ghost" onClick={() => setDraft(saved)} disabled={changedKeys.length === 0}>{t("editor.discard")}</button>
           <button className="btn btn-primary" onClick={save} disabled={saving || changedKeys.length === 0}>
-            <Icon name="download" /> {saving ? "Saving…" : "Save changes"}
+            <Icon name="download" /> {saving ? t("editor.saving") : t("editor.saveChanges")}
           </button>
           {world && (
-            <button className="btn btn-subtle" onClick={() => setIniOpen(true)} title="Edit the raw PalWorldSettings.ini with version history">
-              <Icon name="terminal" size={14} /> .ini Editor
+            <button className="btn btn-subtle" onClick={() => setIniOpen(true)} title={t("editor.iniEditorTitle")}>
+              <Icon name="terminal" size={14} /> {t("editor.iniEditor")}
             </button>
           )}
         </div>

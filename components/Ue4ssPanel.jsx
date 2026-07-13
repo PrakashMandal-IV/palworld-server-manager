@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
 
 export default function Ue4ssPanel({ worldId, running }) {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
@@ -15,32 +17,32 @@ export default function Ue4ssPanel({ worldId, running }) {
   useEffect(() => { load(); }, [load]);
 
   const installUe4ss = async () => {
-    if (!isElectron) return toast("File picker is available in the desktop app.");
-    if (running) return toast("Stop the world before installing UE4SS.", "error");
+    if (!isElectron) return toast(t("common.pickerDesktop"));
+    if (running) return toast(t("ue4ss.stopBeforeInstall"), "error");
     const zipPath = await window.desktop.pickZip();
     if (!zipPath) return;
     setBusy(true);
     try {
       const r = await api(`/api/worlds/${worldId}/ue4ss`, { method: "POST", body: { zipPath } });
-      toast(r.installed ? "UE4SS installed — restart the world to load it." : "Install ran but UE4SS was not detected.", r.installed ? "success" : "error");
+      toast(r.installed ? t("ue4ss.installedRestart") : t("ue4ss.installedNotDetected"), r.installed ? "success" : "error");
       load();
     } catch (e) { toast(e.message, "error"); } finally { setBusy(false); }
   };
 
   const fixGui = async () => {
     setBusy(true);
-    try { setData(await api(`/api/worlds/${worldId}/ue4ss`, { method: "PATCH" })); toast("Disabled UE4SS console (restart to apply)", "success"); }
+    try { setData(await api(`/api/worlds/${worldId}/ue4ss`, { method: "PATCH" })); toast(t("ue4ss.consoleDisabled"), "success"); }
     catch (e) { toast(e.message, "error"); } finally { setBusy(false); }
   };
 
   const importMod = async () => {
-    if (!isElectron) return toast("File picker is available in the desktop app.");
+    if (!isElectron) return toast(t("common.pickerDesktop"));
     const zipPath = await window.desktop.pickZip();
     if (!zipPath) return;
     setBusy(true);
     try {
       const r = await api(`/api/worlds/${worldId}/ue4ss/mods`, { method: "POST", body: { action: "import", zipPath } });
-      toast(`Imported ${r.result.name}`, "success");
+      toast(t("ue4ss.imported", { name: r.result.name }), "success");
       setData((d) => ({ ...d, mods: r.mods }));
     } catch (e) { toast(e.message, "error"); } finally { setBusy(false); }
   };
@@ -54,79 +56,76 @@ export default function Ue4ssPanel({ worldId, running }) {
   };
 
   const removeMod = async (name) => {
-    if (!confirm(`Remove UE4SS mod "${name}"? Its files will be deleted.`)) return;
+    if (!confirm(t("ue4ss.confirmRemove", { name }))) return;
     setBusy(true);
     try {
       const r = await api(`/api/worlds/${worldId}/ue4ss/mods`, { method: "POST", body: { action: "remove", name } });
       setData((d) => ({ ...d, mods: r.mods }));
-      toast("Mod removed", "success");
+      toast(t("ue4ss.removed"), "success");
     } catch (e) { toast(e.message, "error"); } finally { setBusy(false); }
   };
 
-  if (!data) return <p className="subtle" style={{ fontWeight: 600 }}>Loading UE4SS…</p>;
+  if (!data) return <p className="subtle" style={{ fontWeight: 600 }}>{t("ue4ss.loading")}</p>;
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.4rem" }}>
-        <h3 className="heading" style={{ fontSize: "1.05rem", margin: 0 }}>UE4SS / Lua mods</h3>
+        <h3 className="heading" style={{ fontSize: "1.05rem", margin: 0 }}>{t("ue4ss.title")}</h3>
         {data.installed
-          ? <span className="chip" style={{ background: "var(--green-bright)", color: "#0c1a0c" }}>Installed</span>
-          : <span className="chip" style={{ background: "var(--line-strong)" }}>Not installed</span>}
+          ? <span className="chip" style={{ background: "var(--green-bright)", color: "#0c1a0c" }}>{t("ue4ss.installed")}</span>
+          : <span className="chip" style={{ background: "var(--line-strong)" }}>{t("ue4ss.notInstalled")}</span>}
       </div>
       <p className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem", marginTop: 0 }}>
-        UE4SS runs Lua script mods (most Palworld mods on Nexus). This is separate from the
-        Steam Workshop system above. Mods install under your server&apos;s UE4SS mods folder
-        (<code>Pal\Binaries\Win64\ue4ss\Mods</code> on UE4SS 3.0).
+        <Trans i18nKey="ue4ss.desc" components={{ code: <code /> }} />
       </p>
 
       {!data.installed && (
         <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", borderLeft: "3px solid var(--yellow)", marginBottom: "1rem" }}>
-          <div style={{ fontWeight: 800, fontSize: "0.9rem", marginBottom: 4 }}>UE4SS isn’t installed for this world</div>
+          <div style={{ fontWeight: 800, fontSize: "0.9rem", marginBottom: 4 }}>{t("ue4ss.notInstalledTitle")}</div>
           <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 8px" }}>
-            Download the UE4SS release zip (the dedicated-server build) from its official page, then install it here.
-            The app extracts it into <code>Win64</code> and sets the dedicated-server-safe options for you.
+            <Trans i18nKey="ue4ss.notInstalledDesc" components={{ code: <code /> }} />
           </p>
           <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 10px" }}>
-            Get UE4SS:{" "}
+            {t("ue4ss.getUe4ssLabel")}{" "}
             <a href="https://pwmodding.wiki/docs/users/ue4ss/installation-server" target="_blank" rel="noreferrer"
-              style={{ color: "var(--accent)", fontWeight: 700 }}>Palworld UE4SS install guide</a>
+              style={{ color: "var(--accent)", fontWeight: 700 }}>{t("ue4ss.installGuide")}</a>
             {" · "}
             <a href="https://github.com/UE4SS-RE/RE-UE4SS/releases" target="_blank" rel="noreferrer"
-              style={{ color: "var(--accent)", fontWeight: 700 }}>UE4SS releases</a>
+              style={{ color: "var(--accent)", fontWeight: 700 }}>{t("ue4ss.releases")}</a>
           </p>
           <button className="btn btn-primary" style={{ padding: "0.4rem 0.8rem" }} disabled={busy || running} onClick={installUe4ss}>
-            <Icon name="upload" size={15} /> Install UE4SS (.zip)
+            <Icon name="upload" size={15} /> {t("ue4ss.installBtn")}
           </button>
-          {running && <span className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem", marginLeft: 8 }}>Stop the world first.</span>}
+          {running && <span className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem", marginLeft: 8 }}>{t("ue4ss.stopFirst")}</span>}
         </div>
       )}
 
       {data.installed && data.guiConsoleVisible === true && (
         <div className="panel-inset" style={{ padding: "0.8rem 1rem", borderLeft: "3px solid var(--red)", marginBottom: "1rem" }}>
-          <div style={{ fontWeight: 800, fontSize: "0.86rem", marginBottom: 4 }}>⚠ UE4SS console is enabled</div>
+          <div style={{ fontWeight: 800, fontSize: "0.86rem", marginBottom: 4 }}>{t("ue4ss.consoleEnabledTitle")}</div>
           <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "0 0 8px" }}>
-            <code>GuiConsoleVisible</code> is on, which crashes a dedicated server on launch. Turn it off.
+            <Trans i18nKey="ue4ss.consoleEnabledDesc" components={{ code: <code /> }} />
           </p>
-          <button className="btn btn-primary" style={{ padding: "0.35rem 0.7rem" }} disabled={busy} onClick={fixGui}>Disable console</button>
+          <button className="btn btn-primary" style={{ padding: "0.35rem 0.7rem" }} disabled={busy} onClick={fixGui}>{t("ue4ss.disableConsole")}</button>
         </div>
       )}
 
       {data.installed && running && (
         <div className="panel-inset" style={{ padding: "0.8rem 1rem", borderLeft: "3px solid var(--red)", marginBottom: "1rem" }}>
-          <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>Stop the world to add, enable/disable, or remove Lua mods.</span>
-          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}> UE4SS only loads mods at boot.</span>
+          <span style={{ fontWeight: 700, fontSize: "0.82rem" }}>{t("ue4ss.stopToManage")}</span>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>{t("ue4ss.loadsAtBoot")}</span>
         </div>
       )}
 
       {data.installed && (
         <>
           <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-            <button className="btn btn-primary" disabled={busy || running} onClick={importMod}><Icon name="upload" /> Import Lua mod (.zip)</button>
+            <button className="btn btn-primary" disabled={busy || running} onClick={importMod}><Icon name="upload" /> {t("ue4ss.importLua")}</button>
           </div>
 
           {data.mods.length === 0 ? (
             <div className="panel-inset" style={{ padding: "1.4rem", textAlign: "center" }}>
-              <div className="subtle" style={{ fontWeight: 600 }}>No UE4SS mods yet. Import a Lua mod (.zip containing <code>Scripts/main.lua</code>).</div>
+              <div className="subtle" style={{ fontWeight: 600 }}><Trans i18nKey="ue4ss.emptyMods" components={{ code: <code /> }} /></div>
             </div>
           ) : (
             <div style={{ display: "grid", gap: "0.5rem" }}>
@@ -138,13 +137,13 @@ export default function Ue4ssPanel({ worldId, running }) {
                   <div style={{ flex: 1, minWidth: 160 }}>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", display: "flex", alignItems: "center", gap: 8 }}>
                       {m.name}
-                      {!m.hasLua && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>No main.lua</span>}
-                      {m.forcedByEnabledTxt && <span className="chip" style={{ background: "var(--card-2)" }}>enabled.txt</span>}
+                      {!m.hasLua && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>{t("ue4ss.noMainLua")}</span>}
+                      {m.forcedByEnabledTxt && <span className="chip" style={{ background: "var(--card-2)" }}>{t("ue4ss.enabledTxt")}</span>}
                     </div>
                   </div>
                   <button className={`btn ${m.enabled ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
                     disabled={busy || running} onClick={() => toggleMod(m.name, !m.enabled)}>
-                    {m.enabled ? "Enabled" : "Disabled"}
+                    {m.enabled ? t("ue4ss.enabledBtn") : t("ue4ss.disabledBtn")}
                   </button>
                   <button className="btn btn-danger" style={{ padding: "0.35rem 0.6rem" }} disabled={busy || running} onClick={() => removeMod(m.name)}>
                     <Icon name="trash" size={14} />
@@ -154,7 +153,7 @@ export default function Ue4ssPanel({ worldId, running }) {
             </div>
           )}
           <p className="subtle" style={{ fontWeight: 600, fontSize: "0.74rem", marginTop: "0.8rem" }}>
-            Mods load at server boot — <b>restart the world</b> after any change.
+            <Trans i18nKey="ue4ss.restartNote" components={{ b: <b /> }} />
           </p>
         </>
       )}

@@ -2,19 +2,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/components/ThemeProvider";
+import FirstRunWizard from "@/components/FirstRunWizard";
 import { Icon, registerToast } from "@/components/ui";
 import { useJobsPoll, summarize, ProgressBar } from "@/components/jobsClient";
 
+// labelKey resolves through t() at render time — NAV is a module-level const, so it
+// can't call the translation hook itself.
 const NAV = [
-  { href: "/", icon: "grid", label: "Worlds", match: (p) => p === "/" || p.startsWith("/worlds") },
-  { href: "/usage", icon: "activity", label: "Usage", match: (p) => p.startsWith("/usage") },
-  { href: "/settings", icon: "settings", label: "Settings", match: (p) => p.startsWith("/settings") },
-  { href: "/info", icon: "info", label: "Info", match: (p) => p.startsWith("/info") },
+  { href: "/", icon: "grid", labelKey: "nav.worlds", match: (p) => p === "/" || p.startsWith("/worlds") },
+  { href: "/usage", icon: "activity", labelKey: "nav.usage", match: (p) => p.startsWith("/usage") },
+  { href: "/settings", icon: "settings", labelKey: "nav.settings", match: (p) => p.startsWith("/settings") },
+  { href: "/info", icon: "info", labelKey: "nav.info", match: (p) => p.startsWith("/info") },
 ];
 
 export default function Shell({ children }) {
   const { theme, toggle } = useTheme();
+  const { t } = useTranslation();
   const path = usePathname();
   const [toasts, setToasts] = useState([]);
   const [collapsed, setCollapsed] = useState(false);
@@ -49,6 +54,7 @@ export default function Shell({ children }) {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", height: "100vh", overflow: "hidden" }}>
+      <FirstRunWizard />
       {/* Single merged collapsible sidebar */}
       <aside style={{
         width: W, background: "var(--sidebar)", display: "flex", flexDirection: "column",
@@ -65,7 +71,7 @@ export default function Shell({ children }) {
               <span style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: "0.92rem", whiteSpace: "nowrap" }}>PSM</span>
             </div>
           )}
-          <button onClick={toggleCollapse} title={collapsed ? "Expand" : "Collapse"}
+          <button onClick={toggleCollapse} title={collapsed ? t("action.expand") : t("action.collapse")}
             style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 7, borderRadius: 8, display: "grid", placeItems: "center", transition: "background 0.15s" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--line)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
@@ -77,13 +83,13 @@ export default function Shell({ children }) {
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "0.7rem 0.55rem" }}>
           {!collapsed && (
             <div className="subtle" style={{ fontSize: "0.64rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", padding: "0.3rem 0.6rem 0.5rem" }}>
-              Management
+              {t("sidebar.management")}
             </div>
           )}
           {NAV.map((n) => (
-            <NavItem key={n.href} {...n} active={n.match(path)} collapsed={collapsed} />
+            <NavItem key={n.href} {...n} label={t(n.labelKey)} active={n.match(path)} collapsed={collapsed} />
           ))}
-          <DownloadsNavItem active={path.startsWith("/downloads")} collapsed={collapsed} summary={jobSummary} />
+          <DownloadsNavItem active={path.startsWith("/downloads")} collapsed={collapsed} summary={jobSummary} label={t("nav.downloads")} />
         </div>
 
         {/* footer: app version / update + theme */}
@@ -97,7 +103,7 @@ export default function Shell({ children }) {
               }}>
               <Icon name="download" size={15} />
               <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                Update available — v{ver.latest}
+                {t("app.updateAvailable", { version: ver.latest })}
               </span>
             </button>
           )}
@@ -105,20 +111,20 @@ export default function Shell({ children }) {
             {!collapsed && (
               <div style={{ lineHeight: 1.1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: "0.78rem", whiteSpace: "nowrap" }}>
-                  Palworld Server Manager
+                  {t("app.name")}
                 </div>
                 <div className="subtle" style={{ fontSize: "0.68rem" }}>
-                  v{ver?.current || "—"}{ver && !ver.updateAvailable && ver.checked ? " · up to date" : ""}
+                  v{ver?.current || "—"}{ver && !ver.updateAvailable && ver.checked ? ` · ${t("app.upToDate")}` : ""}
                 </div>
               </div>
             )}
             {collapsed && ver?.updateAvailable ? (
-              <button onClick={openRelease} title={`Update available — v${ver.latest}`}
+              <button onClick={openRelease} title={t("app.updateAvailable", { version: ver.latest })}
                 style={{ background: "var(--accent)", border: "none", cursor: "pointer", color: "#fff", padding: 7, borderRadius: 8, display: "grid", placeItems: "center" }}>
                 <Icon name="download" size={18} />
               </button>
             ) : (
-              <button onClick={toggle} title="Toggle theme"
+              <button onClick={toggle} title={t("action.toggleTheme")}
                 style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink-soft)", padding: 7, borderRadius: 8, display: "grid", placeItems: "center", transition: "background 0.15s" }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "var(--line)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
@@ -175,13 +181,13 @@ function NavItem({ href, icon, label, active, collapsed }) {
 
 // Sidebar "Downloads" entry — a permanent nav item that shows a live count and
 // aggregate progress while installs/updates run, and links to the Downloads page.
-function DownloadsNavItem({ active, collapsed, summary }) {
+function DownloadsNavItem({ active, collapsed, summary, label }) {
   const { activeCount, percent, anyError } = summary;
   const busy = activeCount > 0;
   const dotColor = anyError ? "var(--red)" : "var(--accent)";
 
   return (
-    <Link href="/downloads" title={collapsed ? `Downloads${busy ? ` (${activeCount})` : ""}` : undefined}
+    <Link href="/downloads" title={collapsed ? `${label}${busy ? ` (${activeCount})` : ""}` : undefined}
       style={{
         display: "block", padding: collapsed ? "0.6rem" : "0.55rem 0.6rem", borderRadius: 8,
         textDecoration: "none", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "0.9rem",
@@ -200,7 +206,7 @@ function DownloadsNavItem({ active, collapsed, summary }) {
             <span className="animate-pulseDot" style={{ position: "absolute", top: -3, right: -4, width: 8, height: 8, borderRadius: 999, background: dotColor, border: "1.5px solid var(--sidebar)" }} />
           )}
         </span>
-        {!collapsed && <span style={{ whiteSpace: "nowrap", flex: 1 }}>Downloads</span>}
+        {!collapsed && <span style={{ whiteSpace: "nowrap", flex: 1 }}>{label}</span>}
         {!collapsed && busy && (
           <span className="chip" style={{ background: active ? "rgba(255,255,255,0.2)" : "var(--card-2)", fontSize: "0.7rem", fontWeight: 800, padding: "0.05rem 0.4rem" }}>
             {activeCount}

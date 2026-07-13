@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, fmtTime, fmtBytes, StatusChip, toast } from "@/components/ui";
 
 // Full-screen modal editor for PalWorldSettings.ini with version history.
 // Every save/restore snapshots the file, so any change can be rolled back.
 // Guards unsaved edits when closing or restoring a version.
 export default function IniEditor({ world, running, onClose }) {
+  const { t } = useTranslation();
   const worldId = world.world_id;
   const [content, setContent] = useState("");
   const [original, setOriginal] = useState("");
@@ -41,7 +43,7 @@ export default function IniEditor({ world, running, onClose }) {
 
   // Run `action` immediately, or ask to discard first when there are unsaved edits.
   const guard = useCallback((action) => {
-    if (dirty) setConfirm({ message: "You have unsaved changes to the ini. Discard them?", onYes: () => { setConfirm(null); action(); } });
+    if (dirty) setConfirm({ message: t("ini.discardConfirm"), onYes: () => { setConfirm(null); action(); } });
     else action();
   }, [dirty]);
 
@@ -59,7 +61,7 @@ export default function IniEditor({ world, running, onClose }) {
     try {
       await api(`/api/worlds/${worldId}/ini`, { method: "POST", body: { content } });
       setOriginal(content);
-      toast(running ? "Saved — restart the world to apply" : "Saved", "success");
+      toast(running ? t("ini.savedRestart") : t("ini.saved"), "success");
       loadVersions();
     } catch (e) { toast(e.message, "error"); }
     finally { setSaving(false); }
@@ -74,7 +76,7 @@ export default function IniEditor({ world, running, onClose }) {
     try {
       const r = await api(`/api/worlds/${worldId}/ini/versions/${vid}/restore`, { method: "POST" });
       setContent(r.content); setOriginal(r.content); setPreview(null);
-      toast(running ? "Restored — restart the world to apply" : "Restored", "success");
+      toast(running ? t("ini.restoredRestart") : t("ini.restored"), "success");
       loadVersions();
     } catch (e) { toast(e.message, "error"); }
   };
@@ -96,17 +98,17 @@ export default function IniEditor({ world, running, onClose }) {
           <div className="subtle" style={{ fontWeight: 700, fontSize: "0.72rem", flex: 1, minWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {path}
           </div>
-          {dirty && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>Unsaved</span>}
-          <button className="btn btn-ghost" onClick={requestClose}><Icon name="x" size={14} /> Close</button>
+          {dirty && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>{t("ini.unsaved")}</span>}
+          <button className="btn btn-ghost" onClick={requestClose}><Icon name="x" size={14} /> {t("ini.close")}</button>
         </div>
 
         {running && (
           <div className="panel-inset" style={{ padding: "0.5rem 0.9rem", borderLeft: "3px solid var(--yellow)", fontSize: "0.76rem", fontWeight: 700 }}>
-            The world is running. Palworld rewrites this file on shutdown — use the app&apos;s <b>Restart</b> to apply edits safely.
+            <Trans i18nKey="ini.runningNotice" components={{ b: <b /> }} />
           </div>
         )}
         {!exists && !loading && (
-          <div className="subtle" style={{ fontWeight: 700, fontSize: "0.78rem" }}>No saved ini yet — showing the shipped defaults. Saving will create the file.</div>
+          <div className="subtle" style={{ fontWeight: 700, fontSize: "0.78rem" }}>{t("ini.noFileNotice")}</div>
         )}
 
         {/* Body: editor + version history */}
@@ -115,7 +117,7 @@ export default function IniEditor({ world, running, onClose }) {
             <textarea
               className="input"
               spellCheck={false}
-              value={loading ? "Loading…" : content}
+              value={loading ? t("ini.loading") : content}
               onChange={(e) => setContent(e.target.value)}
               disabled={loading}
               wrap="soft"
@@ -123,27 +125,27 @@ export default function IniEditor({ world, running, onClose }) {
             />
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
               <button className="btn btn-ghost" onClick={() => setContent(original)} disabled={!dirty || saving}>
-                <Icon name="restart" size={14} /> Revert
+                <Icon name="restart" size={14} /> {t("ini.revert")}
               </button>
               <button className="btn btn-primary" onClick={save} disabled={!dirty || saving || loading}>
-                <Icon name="download" /> {saving ? "Saving…" : "Save"}
+                <Icon name="download" /> {saving ? t("ini.saving") : t("ini.save")}
               </button>
             </div>
           </div>
 
           <div className="panel-inset" style={{ padding: "0.8rem", display: "flex", flexDirection: "column", minHeight: 0 }}>
-            <div className="heading" style={{ fontSize: "0.9rem", marginBottom: "0.6rem" }}>Version history</div>
+            <div className="heading" style={{ fontSize: "0.9rem", marginBottom: "0.6rem" }}>{t("ini.versionHistory")}</div>
             {versions.length === 0 ? (
-              <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem" }}>No versions yet. Saving creates restore points.</p>
+              <p className="subtle" style={{ fontWeight: 700, fontSize: "0.74rem" }}>{t("ini.noVersions")}</p>
             ) : (
               <div style={{ display: "grid", gap: "0.4rem", overflowY: "auto" }}>
                 {versions.map((v) => (
                   <div key={v.id} style={{ padding: "0.45rem 0.55rem", border: "1px solid var(--line)", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 800, fontSize: "0.74rem" }}>{v.note || "snapshot"}</div>
+                    <div style={{ fontWeight: 800, fontSize: "0.74rem" }}>{v.note || t("ini.snapshot")}</div>
                     <div className="subtle" style={{ fontSize: "0.68rem", fontWeight: 700 }}>{fmtTime(v.created_at)} · {fmtBytes(v.size)}</div>
                     <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem" }}>
-                      <button className="btn btn-ghost" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => viewVersion(v.id)}>View</button>
-                      <button className="btn btn-amber" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => requestRestore(v.id)}>Restore</button>
+                      <button className="btn btn-ghost" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => viewVersion(v.id)}>{t("ini.view")}</button>
+                      <button className="btn btn-amber" style={{ padding: "0.2rem 0.45rem", fontSize: "0.7rem" }} onClick={() => requestRestore(v.id)}>{t("ini.restore")}</button>
                     </div>
                   </div>
                 ))}
@@ -159,14 +161,14 @@ export default function IniEditor({ world, running, onClose }) {
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 70, padding: "2rem" }}>
           <div className="panel" style={{ width: "min(820px, 96vw)", maxHeight: "86vh", display: "flex", flexDirection: "column", padding: "1.1rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.7rem" }}>
-              <div className="heading" style={{ fontSize: "1rem" }}>Version #{preview.id}</div>
-              <button className="btn btn-ghost" onClick={() => setPreview(null)}><Icon name="x" size={14} /> Close</button>
+              <div className="heading" style={{ fontSize: "1rem" }}>{t("ini.versionNum", { id: preview.id })}</div>
+              <button className="btn btn-ghost" onClick={() => setPreview(null)}><Icon name="x" size={14} /> {t("ini.close")}</button>
             </div>
             <textarea className="input" readOnly value={preview.content} wrap="soft"
               style={{ flex: 1, minHeight: 360, fontFamily: "var(--mono, ui-monospace, monospace)", fontSize: "0.78rem", whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word", overflowX: "hidden" }} />
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "0.7rem" }}>
-              <button className="btn btn-ghost" onClick={() => guard(() => { setContent(preview.content); setPreview(null); toast("Loaded into editor — Save to keep", "success"); })}>Load into editor</button>
-              <button className="btn btn-amber" onClick={() => requestRestore(preview.id)}>Restore this version</button>
+              <button className="btn btn-ghost" onClick={() => guard(() => { setContent(preview.content); setPreview(null); toast(t("ini.loadedIntoEditor"), "success"); })}>{t("ini.loadIntoEditor")}</button>
+              <button className="btn btn-amber" onClick={() => requestRestore(preview.id)}>{t("ini.restoreThis")}</button>
             </div>
           </div>
         </div>
@@ -177,11 +179,11 @@ export default function IniEditor({ world, running, onClose }) {
         <div onMouseDown={(e) => { if (e.target === e.currentTarget) setConfirm(null); }}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", zIndex: 80, padding: "2rem" }}>
           <div className="panel" style={{ width: "min(420px, 94vw)", padding: "1.2rem" }}>
-            <div className="heading" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>Unsaved changes</div>
+            <div className="heading" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>{t("ini.unsavedTitle")}</div>
             <p className="subtle" style={{ fontWeight: 600, fontSize: "0.84rem", marginTop: 0 }}>{confirm.message}</p>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", marginTop: "1rem" }}>
-              <button className="btn btn-ghost" onClick={() => setConfirm(null)}>Keep editing</button>
-              <button className="btn btn-danger" onClick={confirm.onYes}>Discard changes</button>
+              <button className="btn btn-ghost" onClick={() => setConfirm(null)}>{t("ini.keepEditing")}</button>
+              <button className="btn btn-danger" onClick={confirm.onYes}>{t("ini.discardChanges")}</button>
             </div>
           </div>
         </div>

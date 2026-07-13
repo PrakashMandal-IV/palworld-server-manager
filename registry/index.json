@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-07-14",
+  "packs": [
+    {
+      "code": "es",
+      "name": "Spanish",
+      "nativeName": "Español",
+      "dir": "ltr",
+      "authors": [
+        "Palworld Server Manager"
+      ],
+      "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/es.json",
+      "updatedAt": "2026-07-14",
+      "completeness": 100
+    },
+    {
+      "code": "ja",
+      "name": "Japanese",
+      "nativeName": "日本語",
+      "dir": "ltr",
+      "authors": [
+        "Palworld Server Manager"
+      ],
+      "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/ja.json",
+      "updatedAt": "2026-07-14",
+      "completeness": 100
+    },
+    {
+      "code": "zh",
+      "name": "Chinese (Simplified)",
+      "nativeName": "简体中文",
+      "dir": "ltr",
+      "authors": [
+        "Palworld Server Manager"
+      ],
+      "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/zh.json",
+      "updatedAt": "2026-07-14",
+      "completeness": 100
+    }
+  ]
+}
