@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   Japanese).** Palworld announces logins/logouts through the in-game chat channel with
   a synthetic **SYSTEM** sender, localized to the server's game language — so they
   appeared in the GUI chat log and were relayed to Discord as lines like
-  `VIΡΞRがログインしました。` ("… logged in"). These system broadcasts aren't real player
+  `PlayerNameがログインしました。` ("… logged in"). These system broadcasts aren't real player
   chat and just duplicate the app's own Join/Leave history, so they're now filtered
   out of both the chat feed and the Discord relay. This takes effect for existing
   servers as soon as the app updates — no need to reinstall the chat relay mod — and

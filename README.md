@@ -36,6 +36,10 @@ a server (new or existing), and manage everything from a clean interface.
 - **Backups** — take, restore, and schedule world backups.
 - **Schedule** — automatic restarts / backups on an interval or at a set time.
 - **Mods** — import and toggle server mods.
+- **Chat & Broadcast** — read in-game chat live and send announcements to players.
+- **Discord notifications** — post server events (start, stop, restart, crash, backup,
+  update) to Discord and relay in-game chat. Add several webhook **channels** per world
+  and route each event to whichever channel you want.
 - **Customize** each world with a profile icon, banner, and accent color.
 - **Export / Import** settings and full world profiles as zip files, for sharing or
   moving between machines.
@@ -49,10 +53,13 @@ a server (new or existing), and manage everything from a clean interface.
 Grab the latest installer from the
 [**Releases**](https://github.com/PrakashMandal-IV/palworld-server-manager/releases/latest) page:
 
-- **Windows:** `Palworld Server Manager Setup <version>.exe`
+- **Windows (installer):** `Palworld Server Manager Setup <version>.exe`
+- **Windows (portable, no install):** `PalworldServerManager-<version>-portable.exe` — runs
+  without installing and keeps all its data in a `PSM-Data` folder next to the `.exe`, so
+  you can carry it (and your worlds) on a USB stick or between PCs.
 - **Linux:** `Palworld Server Manager-<version>.AppImage`
 
-> The Windows installer is not yet code-signed, so SmartScreen may show an
+> The Windows builds are not yet code-signed, so SmartScreen may show an
 > "unrecognized app" warning. Click **More info → Run anyway** to proceed.
 
 ---
@@ -65,8 +72,8 @@ Grab the latest installer from the
    `Steam\steamapps\common\PalServer`).
 3. Once a world is listed, click **Start**. The first launch may take a moment while the
    server initializes.
-4. Open a world and use the tabs — Overview, Players, Console, Settings, Backups,
-   Schedule, Mods, Admin — to manage it.
+4. Open a world and use the tabs — Overview, Players, Broadcast, Chat, Console, Settings,
+   Backups, Schedule, Mods, Discord, Admin — to manage it.
 
 ---
 
@@ -114,7 +121,8 @@ shown in the settings editor, so they can't be broken by accident.
 The app stores its registry (your list of worlds and their metadata) in your user data
 folder:
 
-- **Windows:** `%APPDATA%\palworld-server-manager\`
+- **Windows (installer):** `%APPDATA%\palworld-server-manager\`
+- **Windows (portable):** a `PSM-Data` folder next to the portable `.exe`
 - **Linux:** `~/.config/palworld-server-manager/`
 
 Your actual Palworld worlds, saves, and settings stay in each server's own install folder —
@@ -136,9 +144,9 @@ Requires Node.js 22.5+.
 
 ```bash
 npm install
-npm run dist:win      # Windows installer -> release/
-npm run dist:linux    # Linux AppImage    -> release/
-npm run pack          # unpacked build for testing -> release/
+npm run dist:win      # Windows installer + portable .exe -> release/
+npm run dist:linux    # Linux AppImage                    -> release/
+npm run pack          # unpacked build for testing        -> release/
 ```
 
 On Windows, run the first packaging build from a terminal opened **as Administrator** (or
