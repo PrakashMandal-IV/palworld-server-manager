@@ -1,17 +1,45 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, fmtTime, toast } from "@/components/ui";
 
-export default function SchedulePanel({ worldId, world, schedules, onChange }) {
+const MESSAGE_JOBS = ["system_message", "onscreen_notice"];
+
+export default function SchedulePanel({ worldId, world, schedules, onChange, onGoToBroadcast }) {
   const { t } = useTranslation();
   const [jobType, setJobType] = useState("restart");
   const [mode, setMode] = useState("interval");
   const [intervalHours, setIntervalHours] = useState(6);
+  const [intervalMinutes, setIntervalMinutes] = useState(30);
   const [timeOfDay, setTimeOfDay] = useState("04:00");
+  const [message, setMessage] = useState("");
+  const [joinMatch, setJoinMatch] = useState("");
   const [busy, setBusy] = useState(false);
+  const [onScreenReady, setOnScreenReady] = useState(null); // null = unknown, true/false once checked
+
+  const isMessageJob = MESSAGE_JOBS.includes(jobType);
+
+  // On-screen notices are delivered through the PSMBroadcast mod, which is set up on
+  // the Broadcast tab. Check whether it's installed so we can warn (and offer a jump
+  // there) when the user picks an on-screen notice without it.
+  useEffect(() => {
+    let alive = true;
+    api(`/api/worlds/${worldId}/broadcasts`)
+      .then((r) => { if (alive) setOnScreenReady(!!r.modInstalled); })
+      .catch(() => { if (alive) setOnScreenReady(null); });
+    return () => { alive = false; };
+  }, [worldId]);
+
+  const onScreenModMissing = jobType === "onscreen_notice" && onScreenReady === false;
+
+  // Switching to a non-message job clears the join trigger (it only applies to messages).
+  const onJobType = (v) => {
+    setJobType(v);
+    if (mode === "on_join" && !MESSAGE_JOBS.includes(v)) setMode("interval");
+  };
 
   const add = async () => {
+    if (isMessageJob && !message.trim()) return toast(t("schedule.messageRequired"), "error");
     setBusy(true);
     try {
       await api(`/api/worlds/${worldId}/schedules`, {
@@ -19,10 +47,14 @@ export default function SchedulePanel({ worldId, world, schedules, onChange }) {
         body: {
           job_type: jobType, mode,
           interval_hours: mode === "interval" ? Number(intervalHours) : null,
+          interval_minutes: mode === "minutes" ? Number(intervalMinutes) : null,
           time_of_day: mode === "daily" ? timeOfDay : null,
+          message: isMessageJob ? message.trim() : null,
+          join_match: mode === "on_join" ? joinMatch.trim() : null,
         },
       });
       toast(t("schedule.added"), "success");
+      setMessage(""); setJoinMatch("");
       onChange();
     } catch (e) { toast(e.message, "error"); }
     finally { setBusy(false); }
@@ -35,40 +67,90 @@ export default function SchedulePanel({ worldId, world, schedules, onChange }) {
     } catch (e) { toast(e.message, "error"); }
   };
 
-  const describe = (s) =>
-    `${t(`schedule.jobType.${s.job_type}`, { defaultValue: s.job_type })} · ${s.mode === "interval" ? t("schedule.everyHours", { hours: s.interval_hours }) : t("schedule.dailyAt", { time: s.time_of_day })}`;
+  const describeWhen = (s) => {
+    if (s.mode === "minutes") return t("schedule.everyMinutes", { minutes: s.interval_minutes });
+    if (s.mode === "daily") return t("schedule.dailyAt", { time: s.time_of_day });
+    if (s.mode === "on_join") return s.join_match ? t("schedule.whenPlayerJoins", { name: s.join_match }) : t("schedule.whenAnyJoins");
+    return t("schedule.everyHours", { hours: s.interval_hours });
+  };
+  const describe = (s) => {
+    const head = `${t(`schedule.jobType.${s.job_type}`, { defaultValue: s.job_type })} · ${describeWhen(s)}`;
+    return s.message ? `${head} — "${s.message}"` : head;
+  };
 
   return (
     <div>
       {world && <WarningConfig world={world} onChange={onChange} />}
-      <div className="panel-inset" style={{ padding: "0.9rem", marginBottom: "1rem", display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "flex-end" }}>
-        <div>
-          <label className="label">{t("schedule.job")}</label>
-          <select className="input" value={jobType} onChange={(e) => setJobType(e.target.value)}>
-            <option value="restart">{t("schedule.jobType.restart")}</option>
-            <option value="backup">{t("schedule.jobType.backup")}</option>
-            <option value="update">{t("schedule.jobType.update")}</option>
-          </select>
-        </div>
-        <div>
-          <label className="label">{t("schedule.when")}</label>
-          <select className="input" value={mode} onChange={(e) => setMode(e.target.value)}>
-            <option value="interval">{t("schedule.everyNHours")}</option>
-            <option value="daily">{t("schedule.dailyAtTime")}</option>
-          </select>
-        </div>
-        {mode === "interval" ? (
-          <div>
-            <label className="label">{t("schedule.hours")}</label>
-            <input className="input" type="number" min="1" value={intervalHours} onChange={(e) => setIntervalHours(e.target.value)} style={{ width: 90 }} />
-          </div>
-        ) : (
-          <div>
-            <label className="label">{t("schedule.time")}</label>
-            <input className="input" type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} style={{ width: 120 }} />
+      <div className="panel-inset" style={{ padding: "0.9rem", marginBottom: "1rem", display: "grid", gap: "0.6rem" }}>
+        {onScreenModMissing && (
+          <div className="panel-inset" style={{ padding: "0.7rem 0.9rem", borderLeft: "3px solid var(--yellow)", display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontWeight: 800, fontSize: "0.85rem" }}>{t("schedule.onscreenNeedsModTitle")}</div>
+              <div className="subtle" style={{ fontWeight: 600, fontSize: "0.76rem", marginTop: 2 }}>{t("schedule.onscreenNeedsModDesc")}</div>
+            </div>
+            {onGoToBroadcast && (
+              <button className="btn btn-primary" style={{ padding: "0.4rem 0.75rem" }} onClick={onGoToBroadcast}>
+                <Icon name="bell" size={14} /> {t("schedule.setUpInBroadcast")}
+              </button>
+            )}
           </div>
         )}
-        <button className="btn btn-primary" onClick={add} disabled={busy}><Icon name="plus" /> {t("schedule.add")}</button>
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <label className="label">{t("schedule.job")}</label>
+            <select className="input" value={jobType} onChange={(e) => onJobType(e.target.value)}>
+              <option value="restart">{t("schedule.jobType.restart")}</option>
+              <option value="backup">{t("schedule.jobType.backup")}</option>
+              <option value="update">{t("schedule.jobType.update")}</option>
+              <option value="system_message">{t("schedule.jobType.system_message")}</option>
+              <option value="onscreen_notice">{t("schedule.jobType.onscreen_notice")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">{t("schedule.when")}</label>
+            <select className="input" value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="interval">{t("schedule.everyNHours")}</option>
+              <option value="minutes">{t("schedule.everyNMinutes")}</option>
+              <option value="daily">{t("schedule.dailyAtTime")}</option>
+              {isMessageJob && <option value="on_join">{t("schedule.whenJoins")}</option>}
+            </select>
+          </div>
+          {mode === "interval" && (
+            <div>
+              <label className="label">{t("schedule.hours")}</label>
+              <input className="input" type="number" min="1" value={intervalHours} onChange={(e) => setIntervalHours(e.target.value)} style={{ width: 90 }} />
+            </div>
+          )}
+          {mode === "minutes" && (
+            <div>
+              <label className="label">{t("schedule.minutes")}</label>
+              <input className="input" type="number" min="1" value={intervalMinutes} onChange={(e) => setIntervalMinutes(e.target.value)} style={{ width: 90 }} />
+            </div>
+          )}
+          {mode === "daily" && (
+            <div>
+              <label className="label">{t("schedule.time")}</label>
+              <input className="input" type="time" value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} style={{ width: 120 }} />
+            </div>
+          )}
+          {mode === "on_join" && (
+            <div>
+              <label className="label">{t("schedule.playerFilter")}</label>
+              <input className="input" value={joinMatch} onChange={(e) => setJoinMatch(e.target.value)} placeholder={t("schedule.playerPlaceholder")} style={{ width: 200 }} />
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={add} disabled={busy}><Icon name="plus" /> {t("schedule.add")}</button>
+        </div>
+        {isMessageJob && (
+          <div>
+            <label className="label">{t("schedule.message")}</label>
+            <input className="input" value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("schedule.messagePlaceholder")} />
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", marginTop: 4, marginBottom: 0 }}>
+              {t(jobType === "onscreen_notice" ? "schedule.onscreenHint" : "schedule.systemHint")}
+              {mode === "on_join" && ` ${t("schedule.playerFilterHint")} ${t("schedule.playerTokenHint")}`}
+            </p>
+          </div>
+        )}
       </div>
 
       {schedules.length === 0 ? (

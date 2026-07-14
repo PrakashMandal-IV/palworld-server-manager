@@ -157,7 +157,7 @@ export default function WorldDetail() {
         {tab === "console" && <LogsPanel worldId={id} />}
         {tab === "settings" && <SettingsEditor worldId={id} world={world} running={running} onGoToAdmin={() => setTab("admin")} />}
         {tab === "backups" && <BackupsPanel worldId={id} backups={backups} running={running} onChange={load} />}
-        {tab === "schedule" && <SchedulePanel worldId={id} world={world} schedules={schedules} onChange={load} />}
+        {tab === "schedule" && <SchedulePanel worldId={id} world={world} schedules={schedules} onChange={load} onGoToBroadcast={() => setTab("broadcast")} />}
         {tab === "mods" && (
           <div style={{ display: "grid", gap: "1.8rem" }}>
             <div>

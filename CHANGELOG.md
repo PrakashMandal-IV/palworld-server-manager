@@ -3,9 +3,21 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.3.0] — 2026-07-14
 
 ### Added
+- **Scheduled messages to players.** The Schedule tab has two new job types beyond
+  restart/backup/update: **System message** (posts as a System announcement in the
+  in-game chat feed) and **On-screen notice** (pops on every player's screen through
+  the broadcast mod, falling back to chat if the mod isn't set up). Each carries your
+  own custom message.
+- **More ways to time a schedule.** Alongside *Every N hours* and *Daily at time*,
+  schedules can now run **Every N minutes**, and messages can fire **When a player
+  joins**. The join trigger takes an optional player-name filter (blank = anyone), and
+  you can drop `{player}` into the message to insert the joining player's name.
+- **On-screen setup nudge.** Picking *On-screen notice* without the broadcast mod
+  installed now shows a clear notice with a one-click jump to the Broadcast tab to set
+  it up (the notice still sends via chat until then).
 - **Discord notifications when players join or leave.** The Discord tab's event list
   now includes **Player joined** and **Player left**, each routable to any of your
   webhook channels (or *Don't send*). They're off by default, so existing setups get

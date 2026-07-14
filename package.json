@@ -1,6 +1,6 @@
 {
   "name": "palworld-server-manager",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Multi-world Palworld dedicated server manager (SteamCMD, REST API, backups, scheduler)",
   "author": "Palworld Server Manager",
   "main": "electron/main.js",
