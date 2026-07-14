@@ -28,8 +28,8 @@ export default function SettingsPage() {
     loadCatalog();
   }, []);
 
-  const loadCatalog = () =>
-    api("/api/i18n/registry")
+  const loadCatalog = (force) =>
+    api(`/api/i18n/registry${force ? "?force=1" : ""}`)
       .then((r) => setCatalog({ checked: !!r.checked, packs: r.packs || [] }))
       .catch(() => setCatalog({ checked: false, packs: [] }));
 
@@ -150,7 +150,7 @@ export default function SettingsPage() {
               <Icon name="info" size={13} /> {t("language.makeOwn")}
             </Link>
             <button className="btn btn-ghost" style={{ padding: "0.2rem 0.5rem", fontSize: "0.72rem" }}
-              onClick={loadCatalog} disabled={catalog === null || !!busyCode}>
+              onClick={() => loadCatalog(true)} disabled={catalog === null || !!busyCode}>
               <Icon name="refresh" size={13} /> {t("language.refresh")}
             </button>
           </div>

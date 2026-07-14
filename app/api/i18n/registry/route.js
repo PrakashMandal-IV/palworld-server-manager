@@ -98,9 +98,14 @@ function cmp(a, b) {
 const g = globalThis;
 if (!g.__PAL_I18N_REG) g.__PAL_I18N_REG = { at: 0, packs: null };
 
-export async function GET() {
+export async function GET(req) {
+  // The Refresh button passes ?force=1 to bypass the TTL cache and re-fetch the
+  // index now — otherwise a freshly-published pack update wouldn't surface for up
+  // to TTL minutes even when the user explicitly asks to refresh.
+  let force = false;
+  try { force = new URL(req.url).searchParams.get("force") === "1"; } catch {}
   const cache = g.__PAL_I18N_REG;
-  if (!cache.packs || Date.now() - cache.at > TTL) {
+  if (force || !cache.packs || Date.now() - cache.at > TTL) {
     try {
       const packs = validateIndex(await getText(REGISTRY_URL));
       if (packs) { cache.packs = packs; cache.at = Date.now(); }
