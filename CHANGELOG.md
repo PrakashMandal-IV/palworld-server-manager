@@ -5,6 +5,19 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [2.3.0] — 2026-07-15
 
+### At a glance
+- Live player map — see everyone online on the real Palworld map, no mod needed.
+- Workshop mods: check for updates, update one or all, and see their thumbnails.
+- Open any mod's folder in one click, with Workshop IDs shown next to package names.
+- Force-enable mods published without server install rules.
+- Schedule system messages and on-screen notices to players.
+- New schedule triggers: every N minutes, or when a player joins (with a delay).
+- Discord can now announce players joining and leaving.
+- Update is only offered when there's actually a newer server build.
+- Fixed: scheduled backups ran with the server stopped, evicting real backups.
+- Fixed: upgrading to 2.1.0 silently switched Discord notifications back on.
+- Fixed: the Update available badge never showed on a world's own page.
+
 ### Added
 - **Live player map.** A new **Map** tab plots everyone online on the real Palworld
   world map (the current post-Feybreak one, bundled with the app — nothing to
