@@ -3,9 +3,30 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.3.0] — 2026-07-14
+## [2.3.0] — 2026-07-15
 
 ### Added
+- **Live player map.** A new **Map** tab plots everyone online on the real Palworld
+  world map (the current post-Feybreak one, bundled with the app — nothing to
+  download). Scroll to zoom, drag to pan, and hover a player for their in-game
+  coordinates. It works with the server's own REST API, so no game mod is needed. The
+  map ships pre-calibrated; if you want to fine-tune it for yourself, calibrating from
+  the Map tab changes only your install, and **Reset to default** puts it back.
+- **Workshop mod update checks.** The Mods tab has a **Check for updates** button that
+  compares each installed mod's `Info.json` version against Steam's copy of the same
+  Workshop item. Anything out of date gets a badge showing the new version, plus an
+  **Update** button per mod and an **Update all** for the lot — no more copying mod
+  folders over by hand to keep up.
+- **Workshop mod thumbnails.** Mods that ship preview art now show it in the list
+  instead of the generic shield icon.
+- **Jump to a mod's folder.** Every mod row has a button that opens its folder, and
+  the panel has one for the Workshop root. Workshop mods also show their item ID next
+  to the package name, so matching a folder to a mod no longer takes guesswork.
+- **Force-enable mods that skip `IsServer`.** Some mods run fine on a dedicated server
+  but were published without server install rules, which used to mean wiring them up
+  manually. You can now enable them anyway after a confirmation that says what to
+  expect: Lua mods get bridged into UE4SS and should just work, while Pak-only mods
+  depend on Palworld's own deploy step and may not.
 - **Scheduled messages to players.** The Schedule tab has two new job types beyond
   restart/backup/update: **System message** (posts as a System announcement in the
   in-game chat feed) and **On-screen notice** (pops on every player's screen through
@@ -23,6 +44,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   webhook channels (or *Don't send*). They're off by default, so existing setups get
   no new noise. Join/leave is tracked by a background watcher, so the notifications
   fire even when the app window isn't open on that world.
+
+### Changed
+- **Update is only offered when there's an update.** Worlds now check Steam for a
+  newer server build on their own (every six hours, plus whenever you press *Check for
+  updates*). The **Update available** badge shows the moment one lands, and the Update
+  button is hidden while your build is already current. If Steam can't be reached the
+  button stays available rather than leaving you unable to update.
+
+### Fixed
+- The **Update available** badge never appeared on a world's own page — the page was
+  never told whether an update existed, so the badge could not render regardless of
+  what Steam reported.
 
 ## [2.2.0] — 2026-07-14
 

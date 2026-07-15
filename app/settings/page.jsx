@@ -288,6 +288,20 @@ export default function SettingsPage() {
         </p>
         {steam?.path && <p className="subtle" style={{ fontFamily: "var(--font-mono)", fontSize: "0.74rem", marginTop: 6 }}>{steam.path}</p>}
       </div>
+
+      <div className="panel" style={{ padding: "1.3rem", marginTop: "1rem", borderLeft: "3px solid var(--line-strong)" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.devTitle")}</h3>
+        <p className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem", marginTop: 0 }}>{t("settings.devDesc")}</p>
+        <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
+          <div style={{ minWidth: 220, flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: "0.9rem" }}>{t("settings.devCalibrateTitle")}</div>
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", margin: "2px 0 0" }}>{t("settings.devCalibrateDesc")}</p>
+          </div>
+          <Link href="/map-calibration" className="btn btn-primary" style={{ padding: "0.4rem 0.8rem" }}>
+            <Icon name="pin" size={15} /> {t("settings.devCalibrateBtn")}
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

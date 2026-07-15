@@ -38,9 +38,12 @@ export async function GET(_req, { params }) {
   const sessions = dbm.listSessions(w.world_id, 30);
   const schedules = dbm.listSchedules(w.world_id);
   const backups = dbm.listBackups(w.world_id);
+  // The header's update chip and button key off this. It was never sent here, so the
+  // chip could not render on the detail page no matter what Steam reported.
+  const updateState = steam.updateStateOf(w);
   return NextResponse.json({
     ok: true,
-    world: { ...w, running },
+    world: { ...w, running, updateState, updateAvailable: updateState === "available" },
     live: { info, players, metrics, settings },
     events, sessions, schedules, backups,
   });

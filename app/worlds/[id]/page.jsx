@@ -10,6 +10,7 @@ import CustomizeModal from "@/components/CustomizeModal";
 import SettingsEditor from "@/components/SettingsEditor";
 import BackupsPanel from "@/components/BackupsPanel";
 import SchedulePanel from "@/components/SchedulePanel";
+import MapPanel from "@/components/MapPanel";
 import ModsPanel from "@/components/ModsPanel";
 import Ue4ssPanel from "@/components/Ue4ssPanel";
 import AdminPanel from "@/components/AdminPanel";
@@ -20,6 +21,7 @@ import DiscordPanel from "@/components/DiscordPanel";
 const TABS = [
   { id: "overview", labelKey: "world.tab.overview", icon: "grid" },
   { id: "players", labelKey: "world.tab.players", icon: "users" },
+  { id: "map", labelKey: "world.tab.map", icon: "map" },
   { id: "broadcast", labelKey: "world.tab.broadcast", icon: "bell" },
   { id: "chat", labelKey: "world.tab.chat", icon: "chat" },
   { id: "console", labelKey: "world.tab.console", icon: "terminal" },
@@ -105,7 +107,12 @@ export default function WorldDetail() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
               <h1 className="heading" style={{ fontSize: "1.6rem", margin: 0 }}>{world.display_name}</h1>
               <StatusChip status={world.status} running={running} />
-              {world.updateAvailable && <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}>{t("worlds.updateAvailable")}</span>}
+              {world.updateAvailable && (
+                <span className="chip" style={{ background: "var(--yellow)", color: "#1e1f22" }}
+                  title={t("world.updatePendingTip", { from: world.build_id, to: world.latest_known_build_id })}>
+                  {t("worlds.updateAvailable")}
+                </span>
+              )}
             </div>
             <div className="subtle" style={{ fontWeight: 700, fontSize: "0.8rem", marginTop: 3 }}>
               {live?.info?.servername || world.install_dir}
@@ -121,7 +128,15 @@ export default function WorldDetail() {
             ) : (
               <button className="btn btn-primary" disabled={busy} onClick={() => act("start")}><Icon name="play" /> {busy === "start" ? t("common.starting") : t("common.start")}</button>
             )}
-            <button className="btn btn-amber" disabled={busy || running || world.status === "updating"} onClick={doUpdate}><Icon name="download" /> {busy === "update" || world.status === "updating" ? t("common.updating") : t("common.update")}</button>
+            {/* Only offer Update when there's something to install. "current" is the
+                one state we hide it for — an unknown build (never checked, or Steam
+                unreachable) still shows it, so nobody is left unable to update. */}
+            {(world.updateState !== "current" || world.status === "updating") && (
+              <button className="btn btn-amber" disabled={busy || running || world.status === "updating"} onClick={doUpdate}
+                title={world.updateState === "unknown" ? t("world.updateUnknownTip") : undefined}>
+                <Icon name="download" /> {busy === "update" || world.status === "updating" ? t("common.updating") : t("common.update")}
+              </button>
+            )}
           </div>
         </div>
 
@@ -152,6 +167,7 @@ export default function WorldDetail() {
       <div className="panel" style={{ padding: "1.3rem" }}>
         {tab === "overview" && <Overview world={world} live={live} events={events} sessions={sessions} onDelete={() => setDeleting(true)} />}
         {tab === "players" && <PlayersPanel worldId={id} players={live?.players} onChange={load} />}
+        {tab === "map" && <MapPanel players={live?.players} running={running} />}
         {tab === "broadcast" && <BroadcastPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "chat" && <ChatPanel worldId={id} running={running} onGoToUe4ss={() => setTab("mods")} />}
         {tab === "console" && <LogsPanel worldId={id} />}

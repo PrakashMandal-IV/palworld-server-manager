@@ -45,8 +45,8 @@ export async function GET() {
           };
         } catch {}
       }
-      const updateAvailable = !!(w.build_id && w.latest_known_build_id && w.build_id !== w.latest_known_build_id);
-      return { ...w, running, apiUp, live, updateAvailable };
+      const updateState = steam.updateStateOf(w);
+      return { ...w, running, apiUp, live, updateState, updateAvailable: updateState === "available" };
     })
   );
   return NextResponse.json({ ok: true, worlds: enriched });
