@@ -60,6 +60,19 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   players actually see fall out of the sky.
 
 ### Fixed
+- **Scheduled backups ran even with the server stopped.** A backup schedule fired on
+  its interval whether or not the world was running, and a stopped world's save data
+  can't change — so those backups were identical copies. Worse, since only the newest
+  few backups are kept, a stopped server left running overnight would quietly evict
+  every real backup you had. Scheduled backups now skip while a world is stopped (noted
+  in its event log) and take the backup they owed you as soon as it's running again.
+  Manual backups still work whether or not the server is up.
+- **Upgrading to 2.1.0 silently switched Discord notifications back on.** Events you'd
+  turned off before 2.1.0 were dropped when the old per-event switches became webhook
+  routing, so notifications you'd deliberately silenced — a backup announcement every
+  hour, say — started arriving again. Those switches are now carried across the
+  upgrade. If you've already upgraded and are seeing this, set the event to *Don't
+  send* on the world's Discord tab; that sticks.
 - The **Update available** badge never appeared on a world's own page — the page was
   never told whether an update existed, so the badge could not render regardless of
   what Steam reported.
