@@ -14,6 +14,7 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
   const [timeOfDay, setTimeOfDay] = useState("04:00");
   const [message, setMessage] = useState("");
   const [joinMatch, setJoinMatch] = useState("");
+  const [joinDelay, setJoinDelay] = useState(10);
   const [busy, setBusy] = useState(false);
   const [onScreenReady, setOnScreenReady] = useState(null); // null = unknown, true/false once checked
 
@@ -51,6 +52,7 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
           time_of_day: mode === "daily" ? timeOfDay : null,
           message: isMessageJob ? message.trim() : null,
           join_match: mode === "on_join" ? joinMatch.trim() : null,
+          join_delay_seconds: mode === "on_join" ? Number(joinDelay) : null,
         },
       });
       toast(t("schedule.added"), "success");
@@ -70,7 +72,11 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
   const describeWhen = (s) => {
     if (s.mode === "minutes") return t("schedule.everyMinutes", { minutes: s.interval_minutes });
     if (s.mode === "daily") return t("schedule.dailyAt", { time: s.time_of_day });
-    if (s.mode === "on_join") return s.join_match ? t("schedule.whenPlayerJoins", { name: s.join_match }) : t("schedule.whenAnyJoins");
+    if (s.mode === "on_join") {
+      const who = s.join_match ? t("schedule.whenPlayerJoins", { name: s.join_match }) : t("schedule.whenAnyJoins");
+      const delay = Math.max(0, Number(s.join_delay_seconds) || 0);
+      return delay ? `${who} ${t("schedule.afterDelay", { seconds: delay })}` : who;
+    }
     return t("schedule.everyHours", { hours: s.interval_hours });
   };
   const describe = (s) => {
@@ -134,10 +140,16 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
             </div>
           )}
           {mode === "on_join" && (
-            <div>
-              <label className="label">{t("schedule.playerFilter")}</label>
-              <input className="input" value={joinMatch} onChange={(e) => setJoinMatch(e.target.value)} placeholder={t("schedule.playerPlaceholder")} style={{ width: 200 }} />
-            </div>
+            <>
+              <div>
+                <label className="label">{t("schedule.playerFilter")}</label>
+                <input className="input" value={joinMatch} onChange={(e) => setJoinMatch(e.target.value)} placeholder={t("schedule.playerPlaceholder")} style={{ width: 200 }} />
+              </div>
+              <div>
+                <label className="label">{t("schedule.joinDelay")}</label>
+                <input className="input" type="number" min="0" max="3600" value={joinDelay} onChange={(e) => setJoinDelay(e.target.value)} style={{ width: 90 }} title={t("schedule.joinDelayTip")} />
+              </div>
+            </>
           )}
           <button className="btn btn-primary" onClick={add} disabled={busy}><Icon name="plus" /> {t("schedule.add")}</button>
         </div>
@@ -147,7 +159,7 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
             <input className="input" value={message} onChange={(e) => setMessage(e.target.value)} placeholder={t("schedule.messagePlaceholder")} />
             <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", marginTop: 4, marginBottom: 0 }}>
               {t(jobType === "onscreen_notice" ? "schedule.onscreenHint" : "schedule.systemHint")}
-              {mode === "on_join" && ` ${t("schedule.playerFilterHint")} ${t("schedule.playerTokenHint")}`}
+              {mode === "on_join" && ` ${t("schedule.playerFilterHint")} ${t("schedule.joinDelayHint")} ${t("schedule.playerTokenHint")}`}
             </p>
           </div>
         )}

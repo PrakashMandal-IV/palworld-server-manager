@@ -27,6 +27,12 @@ export async function POST(req, { params }) {
   // on_join only makes sense for the message jobs (there's a player to greet).
   if (mode === "on_join" && !isMessageJob) return NextResponse.json({ ok: false, error: "The join trigger is only available for message jobs." }, { status: 400 });
 
+  // How long to wait after the join before sending. Capped at an hour — past that
+  // it isn't a reaction to the join any more, and the timer only lives in memory.
+  const join_delay_seconds = mode === "on_join"
+    ? Math.min(3600, Math.max(0, Math.round(Number(b.join_delay_seconds) || 0)))
+    : null;
+
   const interval_hours = mode === "interval" ? Math.max(1, Number(b.interval_hours) || 0) : null;
   const interval_minutes = mode === "minutes" ? Math.max(1, Number(b.interval_minutes) || 0) : null;
   const time_of_day = mode === "daily" ? (b.time_of_day ?? null) : null;
@@ -44,6 +50,7 @@ export async function POST(req, { params }) {
     time_of_day,
     message: isMessageJob ? message : null,
     join_match: mode === "on_join" ? (String(b.join_match ?? "").trim() || null) : null,
+    join_delay_seconds,
     enabled: b.enabled === false ? 0 : 1,
     created_at: Date.now(),
   };

@@ -35,7 +35,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **More ways to time a schedule.** Alongside *Every N hours* and *Daily at time*,
   schedules can now run **Every N minutes**, and messages can fire **When a player
   joins**. The join trigger takes an optional player-name filter (blank = anyone), and
-  you can drop `{player}` into the message to insert the joining player's name.
+  you can drop `{player}` into the message to insert the joining player's name. It also
+  takes a **Delay (s)** — wait a few seconds after someone joins so your welcome lands
+  once they're actually in the world rather than on the loading screen. A delayed
+  message is dropped if the player leaves, the server stops, or you remove the
+  schedule before it fires.
 - **On-screen setup nudge.** Picking *On-screen notice* without the broadcast mod
   installed now shows a clear notice with a one-click jump to the Broadcast tab to set
   it up (the notice still sends via chat until then).
@@ -51,6 +55,9 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   updates*). The **Update available** badge shows the moment one lands, and the Update
   button is hidden while your build is already current. If Steam can't be reached the
   button stays available rather than leaving you unable to update.
+- **Clearer name for the supply drop setting.** *Supply drop interval (s)* in
+  **Settings → World & Loot** is now **Meteor/Supply drop interval (s)**, matching what
+  players actually see fall out of the sky.
 
 ### Fixed
 - The **Update available** badge never appeared on a world's own page — the page was
