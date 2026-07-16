@@ -3,6 +3,52 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] — 2026-07-16
+
+### At a glance
+- Servers now start without the black command window — no more clutter next to the app.
+- Fixed: deleting a server could delete the folder above it, taking other servers with it.
+
+### Added
+- **Servers start without a console window.** The black command window that opened
+  beside the app is gone. It's on by default; if you read that window (it's the only
+  place Palworld's raw server output shows up), Settings → **Hide the server console
+  window** turns it back on.
+
+  The window never came from how the app launched the server. Palworld ships the
+  dedicated server as three programs: `PalServer.exe` is a small launcher, and the
+  server itself is built twice — once as a windowed program and once as a console one.
+  The launcher started the console build, and Windows gives a console program without a
+  console of its own a real window. That window belonged to a program the app never
+  launched directly, so no amount of "hide this window" on the app's side could reach
+  it. Now the app just starts the windowed build itself. It's the same server — same
+  ports, same REST API, same save data, and it still keeps running if you close the
+  app. Servers whose folder doesn't have that build fall back to the launcher and start
+  as before.
+
+### Fixed
+- **Deleting a server could wipe a whole folder of servers.** Reported in
+  [#9](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/9): a user
+  with `PalworldServers\Main Server` and `PalworldServers\Testing Server` deleted the
+  testing one and lost `PalworldServers` entirely — including the main server.
+
+  This happened when a server was added with the **parent** folder picked as its
+  install folder (easy to do — the Browse dialog opens on the parent, and SteamCMD
+  installs into whatever folder you give it). That server's recorded folder was then
+  `PalworldServers` itself, so deleting it with **also delete files** removed
+  everything underneath, siblings included. Nothing checked the folder first.
+
+  Two things changed. Deleting files is now refused when the folder holds another
+  registered server, is a drive root, contains the app's own data or backups, or
+  doesn't look like a Palworld server folder at all — the error names what's at risk,
+  and deleting the profile alone still works. Separately, a folder that overlaps
+  another server's is now rejected when you add or move a server, so the bad state
+  can't be created in the first place. Existing servers already pointing at a parent
+  folder are protected by the delete check.
+- **A failed file delete no longer passes silently.** The profile used to disappear
+  while the files stayed behind (e.g. locked by another process), with no error and no
+  way to find them again. The delete now reports what went wrong and keeps the profile.
+
 ## [2.3.0] — 2026-07-15
 
 ### At a glance
