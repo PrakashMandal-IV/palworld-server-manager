@@ -17,6 +17,7 @@ import AdminPanel from "@/components/AdminPanel";
 import ChatPanel from "@/components/ChatPanel";
 import BroadcastPanel from "@/components/BroadcastPanel";
 import DiscordPanel from "@/components/DiscordPanel";
+import DiscordBotPanel from "@/components/DiscordBotPanel";
 
 const TABS = [
   { id: "overview", labelKey: "world.tab.overview", icon: "grid" },
@@ -30,6 +31,7 @@ const TABS = [
   { id: "schedule", labelKey: "world.tab.schedule", icon: "clock" },
   { id: "mods", labelKey: "world.tab.mods", icon: "shield" },
   { id: "discord", labelKey: "world.tab.discord", icon: "bell" },
+  { id: "discordbot", labelKey: "world.tab.discordBot", icon: "chat" },
   { id: "admin", labelKey: "world.tab.admin", icon: "settings" },
 ];
 
@@ -186,6 +188,7 @@ export default function WorldDetail() {
           </div>
         )}
         {tab === "discord" && <DiscordPanel world={world} onChange={load} />}
+        {tab === "discordbot" && <DiscordBotPanel world={world} />}
         {tab === "admin" && <AdminPanel world={world} running={running} onChange={load} />}
       </div>
 

@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui";
 
 const GUIDES = [
   { id: "internet", titleKey: "info.guideInternetTitle", subtitleKey: "info.guideInternetSubtitle", icon: "globe" },
+  { id: "discord-bot", titleKey: "info.guideBotTitle", subtitleKey: "info.guideBotSubtitle", icon: "chat" },
 ];
 
 export default function InfoPage() {
@@ -30,8 +31,42 @@ export default function InfoPage() {
               <Icon name={open === g.id ? "chevronDown" : "chevronRight"} size={18} />
             </button>
             {open === g.id && g.id === "internet" && <PlayitGuide />}
+            {open === g.id && g.id === "discord-bot" && <DiscordBotGuide />}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Making a Discord bot is a handful of clicks in Discord's developer portal, but the
+// portal assumes you already know the words. This walks through it in order.
+function DiscordBotGuide() {
+  const { t } = useTranslation();
+  const open = () => window.open("https://discord.com/developers/applications", "_blank", "noopener");
+  return (
+    <div className="tab-content" style={{ padding: "0 1.2rem 1.4rem", borderTop: "1px solid var(--line)" }}>
+      <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", margin: "1.1rem 0", borderLeft: "3px solid var(--accent)" }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{t("info.whatIsBot")}</div>
+        <div className="subtle" style={{ fontWeight: 600, fontSize: "0.85rem" }}>{t("info.whatIsBotDesc")}</div>
+      </div>
+
+      <button className="btn btn-primary" onClick={open} style={{ marginBottom: "1.2rem" }}>
+        <Icon name="globe" size={16} /> {t("info.openPortal")}
+      </button>
+
+      <Step n="1" title={t("info.bot1Title")}><Trans i18nKey="info.bot1" components={{ b: <b /> }} /></Step>
+      <Step n="2" title={t("info.bot2Title")}><Trans i18nKey="info.bot2" components={{ b: <b /> }} /></Step>
+      <Step n="3" title={t("info.bot3Title")}><Trans i18nKey="info.bot3" components={{ b: <b /> }} /></Step>
+      <Step n="4" title={t("info.bot4Title")}><Trans i18nKey="info.bot4" components={{ b: <b /> }} /></Step>
+      <Step n="5" title={t("info.bot5Title")}><Trans i18nKey="info.bot5" components={{ b: <b />, code: <code /> }} /></Step>
+      <Step n="6" title={t("info.bot6Title")}><Trans i18nKey="info.bot6" components={{ b: <b /> }} /></Step>
+
+      <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", marginTop: "1.1rem", borderLeft: "3px solid var(--warn, var(--accent))" }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>{t("info.botSafetyTitle")}</div>
+        <div className="subtle" style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+          <Trans i18nKey="info.botSafety" components={{ b: <b /> }} />
+        </div>
       </div>
     </div>
   );
