@@ -6,6 +6,7 @@ const rest = require("@/lib/restclient");
 const ini = require("@/lib/ini");
 const steam = require("@/lib/steamcmd");
 const { conflictsInRegistry } = require("@/lib/ports");
+const guard = require("@/lib/installdir");
 const { boot } = require("@/lib/bootstrap");
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,8 @@ export async function PATCH(req, { params }) {
     if (!info.valid) {
       return NextResponse.json({ ok: false, error: info.reason || "Not a valid Palworld server install." }, { status: 400 });
     }
+    const bad = guard.unusableTargetReason(info.installDir, { worlds: dbm.listWorlds(), selfWorldId: params.id });
+    if (bad) return NextResponse.json({ ok: false, error: bad }, { status: 409 });
     const rebased = dbm.updateWorld(params.id, {
       install_dir: info.installDir,
       build_id: info.buildId || null,
@@ -134,9 +137,33 @@ export async function DELETE(req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
   const deleteFiles = new URL(req.url).searchParams.get("files") === "1";
+
+  // Check before stopping anything: this folder is about to be rm -rf'd, and a world
+  // whose install_dir sits above another world's would take that one with it (#9).
+  if (deleteFiles && fs.existsSync(w.install_dir)) {
+    let backupsPath = null;
+    try { backupsPath = require("@/lib/backups").backupInfo().path; } catch {}
+    const reason = guard.unsafeToDeleteReason(w.install_dir, {
+      worlds: dbm.listWorlds(),
+      selfWorldId: w.world_id,
+      extraProtected: backupsPath ? [backupsPath] : [],
+    });
+    if (reason) {
+      return NextResponse.json({
+        ok: false,
+        error: `Refusing to delete ${w.install_dir} because ${reason}. Delete the profile only, then remove the folder yourself if you're sure.`,
+      }, { status: 409 });
+    }
+  }
+
   if (sup.isRunning(w.world_id)) await sup.stopWorld(w.world_id, { graceful: false });
   if (deleteFiles && fs.existsSync(w.install_dir)) {
-    try { fs.rmSync(w.install_dir, { recursive: true, force: true }); } catch {}
+    // Report a failed delete instead of swallowing it — the profile used to vanish
+    // while the files stayed, leaving no way to find or retry them.
+    try { fs.rmSync(w.install_dir, { recursive: true, force: true }); }
+    catch (e) {
+      return NextResponse.json({ ok: false, error: `Could not delete ${w.install_dir}: ${e.message}` }, { status: 500 });
+    }
   }
   dbm.deleteWorld(params.id);
   return NextResponse.json({ ok: true });
