@@ -12,23 +12,38 @@ import { api, Icon, toast } from "@/components/ui";
 export default function DiscordBotPanel({ world }) {
   const { t } = useTranslation();
   const [cfg, setCfg] = useState(null);
-  const [status, setStatus] = useState({ connected: false });
-  const [roles, setRoles] = useState([]);
+  const [status, setStatus] = useState({ connected: false, guilds: 0 });
+  const [dir, setDir] = useState({ roles: [], members: [], membersNeedIntent: false });
   const [token, setToken] = useState("");
   const [userId, setUserId] = useState("");
+  const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Roles and members come from Discord live, so they go stale the moment someone adds
+  // a role over there. Kept separate from the config load so Refresh can re-pull just
+  // this without disturbing the rest of the page.
+  const loadDir = useCallback(async () => {
+    try {
+      const d = await api(`/api/worlds/${world.world_id}/discord-bot/directory`);
+      setDir({ roles: d.roles || [], members: d.members || [], membersNeedIntent: !!d.membersNeedIntent });
+    } catch { /* leave whatever we had */ }
+  }, [world.world_id]);
 
   const load = useCallback(async () => {
     try {
       const r = await api(`/api/worlds/${world.world_id}/discord-bot`);
       setCfg(r.config);
-      setStatus(r.status || { connected: false });
-      if (r.config && r.config.authorized) {
-        const rr = await api(`/api/worlds/${world.world_id}/discord-bot/roles`).catch(() => ({ roles: [] }));
-        setRoles(rr.roles || []);
-      }
+      setStatus(r.status || { connected: false, guilds: 0 });
+      if (r.config && r.config.authorized) await loadDir();
     } catch (e) { toast(e.message, "error"); }
-  }, [world.world_id]);
+  }, [world.world_id, loadDir]);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try { await loadDir(); toast(t("bot.listRefreshed"), "success"); }
+    finally { setRefreshing(false); }
+  };
 
   useEffect(() => { load(); }, [load]);
   // The link only completes once someone runs /authorize over in Discord, so poll
@@ -124,6 +139,9 @@ export default function DiscordBotPanel({ world }) {
         <div className="panel" style={panel}>
           <h3 className="heading" style={step}>{t("bot.step2Title")}</h3>
           <p className="subtle" style={{ fontSize: "0.8rem" }}>{t("bot.step2Desc")}</p>
+          {status.connected && status.guilds === 0 && (
+            <p style={{ fontSize: "0.8rem", marginTop: 0 }}><b>{t("bot.notInAnyServer")}</b></p>
+          )}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <a className="btn btn-primary" href={cfg.inviteUrl} target="_blank" rel="noreferrer" style={{ padding: "0.35rem 0.7rem" }}>
               <Icon name="globe" size={15} /> {t("bot.openInvite")}
@@ -161,36 +179,107 @@ export default function DiscordBotPanel({ world }) {
       {/* ---- step 4: who may use it ---- */}
       {cfg.authorized && (
         <div className="panel" style={panel}>
-          <h3 className="heading" style={step}>{t("bot.step4Title")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <h3 className="heading" style={{ ...step, flex: 1 }}>{t("bot.step4Title")}</h3>
+            {/* Discord is the source of truth for both lists and they change over there,
+                not here — so there has to be a way to re-pull them on demand. */}
+            <button className="btn btn-ghost" style={{ padding: "0.3rem 0.6rem", fontSize: "0.78rem" }} onClick={refresh} disabled={refreshing}>
+              <Icon name="refresh" size={14} /> {refreshing ? t("bot.refreshing") : t("bot.refresh")}
+            </button>
+          </div>
           <p className="subtle" style={{ fontSize: "0.8rem" }}>
             <Trans i18nKey="bot.step4Desc" components={{ b: <b /> }} />
           </p>
 
+          {/* ---- roles: Discord's own order, highest first ---- */}
           <label className="label">{t("bot.roles")}</label>
-          {roles.length === 0 && <p className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.noRoles")}</p>}
+          {dir.roles.length === 0 && <p className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.noRoles")}</p>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.9rem" }}>
-            {roles.map((r) => (
-              <button
-                key={r.id} onClick={() => toggleRole(r.id)} disabled={busy}
-                className={`btn ${cfg.allowedRoles.includes(r.id) ? "btn-primary" : "btn-ghost"}`}
-                style={{ padding: "0.25rem 0.6rem", fontSize: "0.78rem" }}
-              >
-                @{r.name}
-              </button>
-            ))}
+            {dir.roles.map((r) => {
+              const on = cfg.allowedRoles.includes(r.id);
+              return (
+                <button
+                  key={r.id} onClick={() => toggleRole(r.id)} disabled={busy}
+                  className={`btn ${on ? "btn-primary" : "btn-ghost"}`}
+                  style={{ padding: "0.25rem 0.6rem", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                  title={`@${r.name}`}
+                >
+                  {r.iconUrl
+                    ? <img src={r.iconUrl} alt="" width={14} height={14} style={{ borderRadius: 3 }} />
+                    : r.emoji
+                      ? <span>{r.emoji}</span>
+                      : <span style={{ width: 8, height: 8, borderRadius: "50%", background: r.color || "var(--muted, #99aab5)", display: "inline-block" }} />}
+                  @{r.name}
+                </button>
+              );
+            })}
           </div>
 
+          {/* ---- people ---- */}
           <label className="label">{t("bot.people")}</label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
-            {cfg.allowedUsers.map((u) => (
-              <span key={u} className="chip" style={{ fontSize: "0.75rem" }}>
-                {u}{u === cfg.authorizedBy ? ` · ${t("bot.youLinkedIt")}` : ""}
-                <button onClick={() => removeUser(u)} disabled={busy} className="btn btn-ghost" style={{ padding: "0 0.3rem", marginLeft: "0.3rem" }}>×</button>
-              </span>
-            ))}
+
+          {/* Already-allowed people, shown even when the member list isn't available so
+              they can always be removed. */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
+            {cfg.allowedUsers.map((u) => {
+              const m = dir.members.find((x) => x.id === u);
+              return (
+                <span key={u} className="chip" style={{ fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                  {m && <img src={m.avatarUrl} alt="" width={16} height={16} style={{ borderRadius: "50%" }} />}
+                  {m ? m.displayName : u}
+                  {m && <span className="subtle">@{m.username}</span>}
+                  {u === cfg.authorizedBy ? <span className="subtle">· {t("bot.youLinkedIt")}</span> : null}
+                  <button onClick={() => removeUser(u)} disabled={busy} className="btn btn-ghost" style={{ padding: "0 0.3rem" }}>×</button>
+                </span>
+              );
+            })}
             {cfg.allowedUsers.length === 0 && <span className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.noUsers")}</span>}
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", maxWidth: 420 }}>
+
+          {dir.membersNeedIntent ? (
+            // Listing members is the one thing that needs a privileged intent. Rather
+            // than fail quietly, say what to switch on — and keep the id path working.
+            <div className="panel-inset" style={{ padding: "0.8rem 1rem", marginBottom: "0.6rem", borderLeft: "3px solid var(--accent)" }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: 600, marginBottom: "0.3rem" }}>{t("bot.needIntentTitle")}</div>
+              <div className="subtle" style={{ fontSize: "0.78rem" }}>
+                <Trans i18nKey="bot.needIntentDesc" components={{ b: <b />, guide: <Link href="/info#discord-bot" className="link" /> }} />
+              </div>
+            </div>
+          ) : dir.members.length > 0 ? (
+            <>
+              <input
+                className="input" style={{ maxWidth: 320, marginBottom: "0.5rem" }}
+                placeholder={t("bot.searchPeople")} value={filter} onChange={(e) => setFilter(e.target.value)}
+              />
+              <div style={{ maxHeight: 260, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 8 }}>
+                {dir.members
+                  .filter((m) => !filter.trim() || `${m.displayName} ${m.username}`.toLowerCase().includes(filter.trim().toLowerCase()))
+                  .map((m) => {
+                    const on = cfg.allowedUsers.includes(m.id);
+                    return (
+                      <button
+                        key={m.id} onClick={() => (on ? removeUser(m.id) : save({ allowedUsers: [...cfg.allowedUsers, m.id] }))}
+                        disabled={busy}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.7rem",
+                          background: on ? "var(--accent)" : "transparent", color: on ? "#fff" : "var(--ink)",
+                          border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer", textAlign: "left",
+                        }}
+                      >
+                        <img src={m.avatarUrl} alt="" width={24} height={24} style={{ borderRadius: "50%", flexShrink: 0 }} />
+                        <span style={{ fontWeight: 600, fontSize: "0.82rem" }}>{m.displayName}</span>
+                        <span style={{ fontSize: "0.75rem", opacity: 0.7 }}>@{m.username}</span>
+                        <span style={{ marginLeft: "auto", fontSize: "0.75rem" }}>{on ? t("common.on") : ""}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </>
+          ) : null}
+
+          {/* Always available: works with the intent off, and for someone who hasn't
+              joined the server yet. */}
+          <div style={{ display: "flex", gap: "0.5rem", maxWidth: 420, marginTop: "0.6rem" }}>
             <input className="input" placeholder={t("bot.userIdPlaceholder")} value={userId} onChange={(e) => setUserId(e.target.value)} />
             <button className="btn" onClick={addUser} disabled={busy || !userId.trim()}>{t("common.add")}</button>
           </div>

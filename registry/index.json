@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updatedAt": "2026-07-16T21:30:00Z",
+  "updatedAt": "2026-07-16T23:00:00Z",
   "packs": [
     {
       "code": "es",
@@ -11,7 +11,7 @@
         "Palworld Server Manager"
       ],
       "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/es.json",
-      "updatedAt": "2026-07-16T21:30:00Z",
+      "updatedAt": "2026-07-16T23:00:00Z",
       "completeness": 100
     },
     {
@@ -23,7 +23,7 @@
         "Palworld Server Manager"
       ],
       "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/ja.json",
-      "updatedAt": "2026-07-16T21:30:00Z",
+      "updatedAt": "2026-07-16T23:00:00Z",
       "completeness": 100
     },
     {
@@ -35,7 +35,7 @@
         "Palworld Server Manager"
       ],
       "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/zh.json",
-      "updatedAt": "2026-07-16T21:30:00Z",
+      "updatedAt": "2026-07-16T23:00:00Z",
       "completeness": 100
     }
   ]

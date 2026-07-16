@@ -61,6 +61,7 @@ function DiscordBotGuide() {
       <Step n="4" title={t("info.bot4Title")}><Trans i18nKey="info.bot4" components={{ b: <b /> }} /></Step>
       <Step n="5" title={t("info.bot5Title")}><Trans i18nKey="info.bot5" components={{ b: <b />, code: <code /> }} /></Step>
       <Step n="6" title={t("info.bot6Title")}><Trans i18nKey="info.bot6" components={{ b: <b /> }} /></Step>
+      <Step n="7" title={t("info.bot7Title")}><Trans i18nKey="info.bot7" components={{ b: <b /> }} /></Step>
 
       <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", marginTop: "1.1rem", borderLeft: "3px solid var(--warn, var(--accent))" }}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>{t("info.botSafetyTitle")}</div>
