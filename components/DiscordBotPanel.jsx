@@ -485,8 +485,10 @@ export default function DiscordBotPanel({ world }) {
           <h3 className="heading" style={step}>{t("bot.commandsTitle")}</h3>
           <ul className="subtle" style={{ fontSize: "0.8rem", marginBottom: 0, paddingLeft: "1.1rem" }}>
             <li><code>/start</code> · <code>/stop</code> · <code>/restart</code> — {t("bot.cmdLifecycle")}</li>
+            <li><code>/status</code> — {t("bot.cmdStatus")}</li>
             <li><code>/broadcast</code> — {t("bot.cmdBroadcast")}</li>
             <li><code>/backup</code> — {t("bot.cmdBackup")}</li>
+            <li><code>/kick</code> — {t("bot.cmdKick")}</li>
           </ul>
           <p className="subtle" style={{ fontSize: "0.75rem", marginTop: "0.7rem", marginBottom: 0 }}>{t("bot.appMustRun")}</p>
         </div>
