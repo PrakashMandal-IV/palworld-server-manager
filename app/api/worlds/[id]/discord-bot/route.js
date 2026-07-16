@@ -92,6 +92,17 @@ export async function POST(req, { params }) {
     bot.writeConfig(params.id, { permissions: next });
   }
 
+  // --- what /status puts on its card ---
+  // { statusField: { field, on } } — one switch at a time, and an unknown field is
+  // ignored rather than stored, so the saved shape can only ever hold real ones.
+  if (body.statusField && typeof body.statusField === "object") {
+    const { field, on } = body.statusField;
+    if (cfgLib.STATUS_FIELDS.includes(field)) {
+      const cur = bot.readConfig(params.id);
+      bot.writeConfig(params.id, { statusFields: { ...cur.statusFields, [field]: on === true } });
+    }
+  }
+
   // --- unlink the guild, keep the bot ---
   if (body.unlink === true) {
     bot.writeConfig(params.id, { guildId: "", guildName: "", authorizedAt: 0, authorizedBy: "", allowedRoles: [], allowedUsers: [] });

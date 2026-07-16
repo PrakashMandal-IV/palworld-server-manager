@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
@@ -100,6 +100,97 @@ function ActionLog({ world }) {
         </div>
       )}
     </div>
+  );
+}
+
+// What a /status card shows, hung off the column header it belongs to.
+//
+// Fixed rather than absolute on purpose: the grid scrolls sideways, and a CSS overflow
+// container clips on both axes — `overflow-x: auto` forces overflow-y to compute to auto
+// too, so an absolutely positioned menu inside it would be cut off at the header's edge.
+// Measuring the button and drawing against the viewport is what lets it escape. The cost
+// is that it has to close when the viewport moves, or it hangs in space away from the
+// header it points at.
+function StatusFieldsMenu({ cfg, onToggle }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState(null);
+  const btnRef = useRef(null);
+  const popRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => {
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      if (btnRef.current && btnRef.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const away = () => setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("scroll", away, true);
+    window.addEventListener("resize", away);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", away, true);
+      window.removeEventListener("resize", away);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    if (open) { setOpen(false); return; }
+    const r = btnRef.current.getBoundingClientRect();
+    // Keep it on screen: near the right edge, hang the menu from the button's right.
+    const width = 240;
+    const left = Math.min(r.left, Math.max(8, window.innerWidth - width - 8));
+    setAt({ top: r.bottom + 6, left });
+    setOpen(true);
+  };
+
+  const fields = cfg.statusFieldNames || [];
+  return (
+    <>
+      <button
+        ref={btnRef} onClick={toggle}
+        className="btn btn-ghost"
+        style={{ padding: "0.1rem 0.35rem", fontSize: "0.78rem", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "0.2rem" }}
+        title={t("bot.statusFieldsTitle")} aria-haspopup="true" aria-expanded={open}
+      >
+        /status <Icon name="settings" size={11} />
+      </button>
+      {open && at && (
+        <div
+          ref={popRef} role="dialog" aria-label={t("bot.statusFieldsTitle")}
+          style={{
+            position: "fixed", top: at.top, left: at.left, width: 240, zIndex: 60,
+            background: "var(--panel, #1e1f22)", border: "1px solid var(--line)", borderRadius: 10,
+            padding: "0.7rem", boxShadow: "0 8px 24px rgba(0,0,0,0.35)", textAlign: "left",
+            // The column header this hangs off is nowrap so the grid stays on one line.
+            // white-space inherits, and being fixed doesn't escape inheritance — only
+            // clipping — so without this the hint runs off the side in one long line.
+            whiteSpace: "normal",
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: "0.8rem", marginBottom: "0.2rem" }}>{t("bot.statusFieldsTitle")}</div>
+          <p className="subtle" style={{ fontSize: "0.72rem", margin: "0 0 0.5rem", fontWeight: 600 }}>{t("bot.statusFieldsDesc")}</p>
+          {fields.map((f) => {
+            const on = cfg.statusFields[f] !== false;
+            return (
+              <label
+                key={f}
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.25rem 0", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
+              >
+                <input type="checkbox" checked={on} onChange={() => onToggle(f, !on)} />
+                {t(`bot.field_${f}`)}
+              </label>
+            );
+          })}
+          <p className="subtle" style={{ fontSize: "0.7rem", margin: "0.5rem 0 0", fontWeight: 600 }}>{t("bot.statusAddressHint")}</p>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -213,6 +304,20 @@ export default function DiscordBotPanel({ world }) {
   // One cell of the grid: this subject, this action, on or off.
   const setGrant = (action, type, id, on) =>
     applyPerms(nextGrant(cfg.permissions, action, type, id, on), { grant: { action, type, id, on } });
+
+  // One line of the /status card. Applied on the spot for the same reason the grid is:
+  // a tick that waits on a round-trip to appear feels broken.
+  const setStatusField = async (field, on) => {
+    const prev = cfg;
+    setCfg({ ...cfg, statusFields: { ...cfg.statusFields, [field]: on } });
+    try {
+      const r = await api(`/api/worlds/${world.world_id}/discord-bot`, { method: "POST", body: { statusField: { field, on } } });
+      setCfg(r.config);
+    } catch (e) {
+      setCfg(prev);
+      toast(e.message, "error");
+    }
+  };
 
   const toggleRole = (id) => grantSubject("role", id, !cfg.allowedRoles.includes(id));
   const toggleUser = (id) => grantSubject("user", id, !cfg.allowedUsers.includes(id));
@@ -376,7 +481,11 @@ export default function DiscordBotPanel({ world }) {
                   <tr>
                     <th style={{ textAlign: "left", padding: "0.3rem 0.6rem 0.3rem 0" }} />
                     {cfg.actions.map((a) => (
-                      <th key={a} style={{ padding: "0.3rem 0.4rem", fontWeight: 700, whiteSpace: "nowrap" }}>/{a}</th>
+                      <th key={a} style={{ padding: "0.3rem 0.4rem", fontWeight: 700, whiteSpace: "nowrap" }}>
+                        {/* /status is the one command whose answer is public, so what it
+                            gives away is worth setting where it's granted. */}
+                        {a === "status" ? <StatusFieldsMenu cfg={cfg} onToggle={setStatusField} /> : `/${a}`}
+                      </th>
                     ))}
                   </tr>
                 </thead>
