@@ -244,6 +244,24 @@ export default function SettingsPage() {
       </div>
 
       <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.hideConsoleTitle")}</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button className={`btn ${s.hideConsoleWindow !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+            onClick={() => save({ hideConsoleWindow: s.hideConsoleWindow === false })} disabled={saving}>
+            {s.hideConsoleWindow !== false ? t("common.on") : t("common.off")}
+          </button>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
+            <Trans i18nKey="settings.hideConsoleDesc" components={{ b: <b /> }} />
+          </span>
+        </div>
+        {s.hideConsoleWindow === false && (
+          <p className="subtle" style={{ fontSize: "0.78rem", marginBottom: 0, marginTop: "0.6rem" }}>
+            <Trans i18nKey="settings.hideConsoleWarn" components={{ b: <b /> }} />
+          </p>
+        )}
+      </div>
+
+      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
         <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.backupsTitle")}</h3>
         <label className="label">{t("settings.keepLastN")}</label>
         <div style={{ display: "flex", gap: "0.5rem", maxWidth: 260 }}>
