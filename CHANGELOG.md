@@ -3,13 +3,59 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.4.0] — 2026-07-16
+## [2.4.0] — 2026-07-17
 
 ### At a glance
+- Run a world from Discord with your own bot: start, stop, restart, broadcast, back up,
+  check status, and kick someone — with a say over who may do which.
 - Servers now start without the black command window — no more clutter next to the app.
 - Fixed: deleting a server could delete the folder above it, taking other servers with it.
 
 ### Added
+- **Run a world from Discord.** A new **Discord Bot** tab on each world sets up your own
+  bot in four steps, giving you `/start`, `/stop`, `/restart`, `/broadcast`, `/backup`,
+  `/status` and `/kick` in your Discord server. The Info page has a step-by-step guide to
+  making the bot itself.
+
+  It's your bot, not ours. You create it in Discord's developer portal and paste its
+  token, which stays on this computer: it's never displayed again, never sent anywhere
+  else, and you can revoke it from Discord whenever you like. The invite link asks for
+  **no permissions at all** — the bot can't read messages and can't post on its own, it
+  only ever answers its own commands. Everything runs from this app, so the commands work
+  while it's open and stop when it closes.
+
+  A Discord server is linked to a world with `/authorize`, which asks for the world's
+  admin password in a private box only you can see. A slash command's options are shown
+  to the whole channel, so a password could never be one of them. Five wrong tries locks
+  that person out for fifteen minutes, and the bot only ever works in the one server you
+  linked it to.
+
+- **A say over who can do what.** Nobody can use the bot until you name them — an empty
+  list means nobody, not everybody. Pick roles and people out of your Discord server's
+  own lists, with their icons, avatars and display names, then tick per command: someone
+  can be allowed to take a backup without being allowed to stop the server. Whoever runs
+  `/authorize` gets everything, so a fresh setup is usable straight away.
+
+  Listing people needs the **Server Members Intent** switched on for your bot; the panel
+  says so and links to how, and you can always add someone by ID instead.
+
+- **An activity log.** Every command anyone runs from Discord is recorded — including
+  the ones that were refused, because "who tried to stop the server at 3am" is the
+  question a log like this exists to answer. Filter it by date, person, command or
+  outcome.
+
+- **`/status`, for the whole channel.** "Is the server up?" is a question the channel
+  has, so its answer goes to the channel rather than just whoever asked: a card with the
+  world's name, whether it's up, the in-game day, uptime, player count and who's on, plus
+  the server's name and the address people connect on from Settings → Server Identity.
+  The gear on its column in the access grid picks which of those it gives away. The
+  address appears once a Public IP is set there — left blank, the server works its own
+  out and the app can't see what it lands on.
+
+- **`/kick`, without hunting for an ID.** Pick whoever's playing from a list Discord
+  fills in as you type, and see who's left afterwards. Only people allowed to kick can
+  see that list.
+
 - **Servers start without a console window.** The black command window that opened
   beside the app is gone. It's on by default; if you read that window (it's the only
   place Palworld's raw server output shows up), Settings → **Hide the server console
