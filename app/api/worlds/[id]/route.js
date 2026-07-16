@@ -74,13 +74,31 @@ export async function PATCH(req, { params }) {
     dbm.logEvent(params.id, "settings", `Install folder changed to ${info.installDir}`);
   }
 
-  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message"];
+  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "env_vars", "wine_binary", "wine_prefix", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message"];
   const clean = {};
   for (const k of allowed) if (k in patch) clean[k] = patch[k];
   // notify_events is stored as a JSON string column; accept an object from the client.
   if (clean.notify_events && typeof clean.notify_events === "object") {
     clean.notify_events = JSON.stringify(clean.notify_events);
   }
+  // env_vars is a JSON column, same convention as notify_events/discord_webhooks.
+  if (clean.env_vars && typeof clean.env_vars === "object") {
+    for (const k of Object.keys(clean.env_vars)) {
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) {
+        return NextResponse.json({ ok: false, error: `Invalid environment variable name: "${k}"` }, { status: 400 });
+      }
+    }
+    clean.env_vars = JSON.stringify(clean.env_vars);
+  }
+  if ("wine_binary" in clean && !String(clean.wine_binary).trim()) clean.wine_binary = "wine";
+  // (running-state guard, following the existing convention used for ports/install_dir):
+  // reject changing wine_prefix or wine_binary while the world is running, since that's a live-only setting
+  // that wouldn't apply until restart anyway and could confuse the running process's state
+  // same pattern as the install_dir / ports checks already in this file,
+  if (["wine_binary", "wine_prefix"].some((k) => k in clean) && (sup.isRunning(w.world_id) || sup.pidAlive(w.process_id))) {
+    return NextResponse.json({ ok: false, error: "Stop the world before changing Wine settings." }, { status: 409 });
+  }
+
   // discord_webhooks (the multi-webhook routing config) is likewise a JSON column.
   if (clean.discord_webhooks && typeof clean.discord_webhooks === "object") {
     clean.discord_webhooks = JSON.stringify(clean.discord_webhooks);
