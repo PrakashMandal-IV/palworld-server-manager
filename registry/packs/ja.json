@@ -275,7 +275,7 @@
     "bot.result_error": "失敗",
     "bot.commandsTitle": "コマンド",
     "bot.cmdLifecycle": "サーバーの起動・停止・再起動",
-    "bot.cmdStatus": "稼働中か、ゲーム内の日数・稼働時間・プレイ中の人を表示",
+    "bot.cmdStatus": "稼働中か、ゲーム内の日数・稼働時間・プレイ中の人を表示（チャンネル全員に見える唯一のコマンド）",
     "bot.cmdBroadcast": "プレイ中の全員にメッセージを表示",
     "bot.cmdBackup": "すぐにバックアップを取る",
     "bot.cmdKick": "プレイ中の人を退出させる（オンラインの一覧から選べます）",

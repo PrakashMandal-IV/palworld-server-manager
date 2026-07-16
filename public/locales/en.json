@@ -281,7 +281,7 @@
     "bot.result_error": "failed",
     "bot.commandsTitle": "Commands",
     "bot.cmdLifecycle": "start, stop or restart the server",
-    "bot.cmdStatus": "is it up? in-game day, uptime and who's playing",
+    "bot.cmdStatus": "is it up? in-game day, uptime and who's playing — the only one the whole channel sees",
     "bot.cmdBroadcast": "show a message to everyone playing",
     "bot.cmdBackup": "take a backup right away",
     "bot.cmdKick": "remove someone who's playing — pick them from a list of who's online",

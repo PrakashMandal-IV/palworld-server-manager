@@ -275,7 +275,7 @@
     "bot.result_error": "falló",
     "bot.commandsTitle": "Comandos",
     "bot.cmdLifecycle": "iniciar, detener o reiniciar el servidor",
-    "bot.cmdStatus": "¿está encendido? día del juego, tiempo activo y quién está jugando",
+    "bot.cmdStatus": "¿está encendido? día del juego, tiempo activo y quién está jugando: el único que ve todo el canal",
     "bot.cmdBroadcast": "mostrar un mensaje a todos los que estén jugando",
     "bot.cmdBackup": "hacer una copia de seguridad al momento",
     "bot.cmdKick": "expulsar a alguien que esté jugando: se elige de una lista de quién está conectado",
