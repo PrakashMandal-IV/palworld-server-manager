@@ -70,14 +70,26 @@ export async function POST(req, { params }) {
     else await bot.stopBot(params.id);
   }
 
-  // --- allowlist ---
-  if (Array.isArray(body.allowedRoles) || Array.isArray(body.allowedUsers)) {
-    const patch = {};
-    if (Array.isArray(body.allowedRoles)) patch.allowedRoles = body.allowedRoles;
-    if (Array.isArray(body.allowedUsers)) patch.allowedUsers = body.allowedUsers;
-    // writeConfig normalizes through discord-bot-config, so junk ids never land.
-    const merged = { ...bot.readConfig(params.id), ...patch };
-    bot.writeConfig(params.id, cfgLib.normalizeBotConfig({ discord_bot: JSON.stringify(merged) }));
+  // --- permissions: one cell of the grid ---
+  // { grant: { action, type: "role"|"user", id, on } }
+  if (body.grant && typeof body.grant === "object") {
+    const { action, type, id, on } = body.grant;
+    const cur = bot.readConfig(params.id);
+    const next = cfgLib.setGrant(cur.permissions, String(action), type === "role" ? "role" : "user", String(id), on === true);
+    bot.writeConfig(params.id, { permissions: next });
+  }
+
+  // --- permissions: add or remove a subject entirely ---
+  // { subject: { type, id, grant: true|false } } — adding means every action, which is
+  // what "let this person use the bot" means before anyone narrows it down.
+  if (body.subject && typeof body.subject === "object") {
+    const { type, id, grant } = body.subject;
+    const cur = bot.readConfig(params.id);
+    const kind = type === "role" ? "role" : "user";
+    const next = grant === false
+      ? cfgLib.revokeAll(cur.permissions, kind, String(id))
+      : cfgLib.grantAll(cur.permissions, kind, String(id));
+    bot.writeConfig(params.id, { permissions: next });
   }
 
   // --- unlink the guild, keep the bot ---

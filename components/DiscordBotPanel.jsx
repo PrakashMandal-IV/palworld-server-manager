@@ -9,6 +9,94 @@ import { api, Icon, toast } from "@/components/ui";
 //
 // The token is write-only from here on: the server hands back only a masked hint, so
 // there is nothing to read back out of the page once it's saved.
+// Who did what, and when. Refusals are in here too — the point of a record like this
+// is answering "who tried to stop the server", not only who managed it.
+function ActionLog({ world }) {
+  const { t } = useTranslation();
+  const [data, setData] = useState({ entries: [], actors: [], actions: [] });
+  const [f, setF] = useState({ user: "", action: "", result: "", days: "7" });
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const q = new URLSearchParams();
+      if (f.user) q.set("user", f.user);
+      if (f.action) q.set("action", f.action);
+      if (f.result) q.set("result", f.result);
+      // "All time" is the empty case; anything else is a window ending now.
+      if (f.days) q.set("from", String(Date.now() - Number(f.days) * 86400000));
+      const r = await api(`/api/worlds/${world.world_id}/discord-bot/log?${q.toString()}`);
+      setData({ entries: r.entries || [], actors: r.actors || [], actions: r.actions || [] });
+    } catch { /* leave what we had */ }
+    finally { setLoading(false); }
+  }, [world.world_id, f]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const RESULT_STYLE = {
+    ok: { color: "var(--ok, #3ba55d)" },
+    denied: { color: "var(--warn, #faa61a)" },
+    error: { color: "var(--danger, #ed4245)" },
+  };
+  const sel = { padding: "0.3rem 0.4rem", fontSize: "0.78rem" };
+
+  return (
+    <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.2rem" }}>
+        <h3 className="heading" style={{ marginTop: 0, fontSize: "1.05rem", flex: 1 }}>{t("bot.logTitle")}</h3>
+        <button className="btn btn-ghost" style={{ padding: "0.3rem 0.6rem", fontSize: "0.78rem" }} onClick={load} disabled={loading}>
+          <Icon name="refresh" size={14} /> {t("bot.refresh")}
+        </button>
+      </div>
+      <p className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.logDesc")}</p>
+
+      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.7rem" }}>
+        <select className="input" style={sel} value={f.days} onChange={(e) => setF({ ...f, days: e.target.value })}>
+          <option value="1">{t("bot.last24h")}</option>
+          <option value="7">{t("bot.last7d")}</option>
+          <option value="30">{t("bot.last30d")}</option>
+          <option value="">{t("bot.allTime")}</option>
+        </select>
+        <select className="input" style={sel} value={f.user} onChange={(e) => setF({ ...f, user: e.target.value })}>
+          <option value="">{t("bot.anyone")}</option>
+          {data.actors.map((a) => (
+            <option key={a.user_id} value={a.user_id}>{a.user_name || a.user_id} ({a.n})</option>
+          ))}
+        </select>
+        <select className="input" style={sel} value={f.action} onChange={(e) => setF({ ...f, action: e.target.value })}>
+          <option value="">{t("bot.anyAction")}</option>
+          {data.actions.map((a) => <option key={a} value={a}>/{a}</option>)}
+        </select>
+        <select className="input" style={sel} value={f.result} onChange={(e) => setF({ ...f, result: e.target.value })}>
+          <option value="">{t("bot.anyResult")}</option>
+          <option value="ok">{t("bot.resultOk")}</option>
+          <option value="denied">{t("bot.resultDenied")}</option>
+          <option value="error">{t("bot.resultError")}</option>
+        </select>
+      </div>
+
+      {data.entries.length === 0 ? (
+        <p className="subtle" style={{ fontSize: "0.78rem", marginBottom: 0 }}>{t("bot.logEmpty")}</p>
+      ) : (
+        <div style={{ maxHeight: 320, overflowY: "auto", border: "1px solid var(--line)", borderRadius: 8 }}>
+          {data.entries.map((e) => (
+            <div key={e.id} style={{ display: "flex", alignItems: "baseline", gap: "0.6rem", padding: "0.4rem 0.7rem", borderBottom: "1px solid var(--line)", fontSize: "0.78rem" }}>
+              <span className="subtle" style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                {new Date(e.created_at).toLocaleString()}
+              </span>
+              <span style={{ fontWeight: 700 }}>{e.user_name || e.user_id}</span>
+              <code>/{e.action}</code>
+              <span style={{ fontWeight: 700, ...(RESULT_STYLE[e.result] || {}) }}>{t(`bot.result_${e.result}`)}</span>
+              {e.detail && <span className="subtle" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.detail}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DiscordBotPanel({ world }) {
   const { t } = useTranslation();
   const [cfg, setCfg] = useState(null);
@@ -84,20 +172,25 @@ export default function DiscordBotPanel({ world }) {
     finally { setBusy(false); }
   };
 
-  const toggleRole = (id) => {
-    const next = cfg.allowedRoles.includes(id)
-      ? cfg.allowedRoles.filter((r) => r !== id)
-      : [...cfg.allowedRoles, id];
-    save({ allowedRoles: next });
-  };
+  // Adding someone means every action — that's what "let them use the bot" means
+  // before you narrow it down. Removing takes back the lot.
+  const grantSubject = (type, id, grant) => save({ subject: { type, id, grant } });
+  // One cell of the grid: this subject, this action, on or off.
+  const setGrant = (action, type, id, on) => save({ grant: { action, type, id, on } });
+
+  const toggleRole = (id) => grantSubject("role", id, !cfg.allowedRoles.includes(id));
   const addUser = () => {
     const id = userId.trim();
     if (!/^\d{5,25}$/.test(id)) { toast(t("bot.badUserId"), "error"); return; }
     if (cfg.allowedUsers.includes(id)) { setUserId(""); return; }
-    save({ allowedUsers: [...cfg.allowedUsers, id] });
+    grantSubject("user", id, true);
     setUserId("");
   };
-  const removeUser = (id) => save({ allowedUsers: cfg.allowedUsers.filter((u) => u !== id) });
+  const removeUser = (id) => grantSubject("user", id, false);
+
+  // Does this subject have this action?
+  const has = (action, type, id) =>
+    !!cfg && !!cfg.permissions[action] && cfg.permissions[action][type === "role" ? "roles" : "users"].includes(id);
 
   if (!cfg) return <div className="panel" style={{ padding: "1.3rem" }}><span className="subtle">{t("common.loading")}</span></div>;
 
@@ -236,6 +329,58 @@ export default function DiscordBotPanel({ world }) {
             {cfg.allowedUsers.length === 0 && <span className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.noUsers")}</span>}
           </div>
 
+          {/* ---- the grid: which of them can do what ---- */}
+          {(cfg.allowedRoles.length > 0 || cfg.allowedUsers.length > 0) && (
+            <div style={{ marginBottom: "1rem", overflowX: "auto" }}>
+              <label className="label">{t("bot.whoCanWhat")}</label>
+              <p className="subtle" style={{ fontSize: "0.75rem", marginTop: 0 }}>{t("bot.whoCanWhatDesc")}</p>
+              <table style={{ borderCollapse: "collapse", fontSize: "0.78rem", minWidth: 460 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: "left", padding: "0.3rem 0.6rem 0.3rem 0" }} />
+                    {cfg.actions.map((a) => (
+                      <th key={a} style={{ padding: "0.3rem 0.4rem", fontWeight: 700, whiteSpace: "nowrap" }}>/{a}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ...cfg.allowedRoles.map((id) => ({ type: "role", id, label: `@${(dir.roles.find((r) => r.id === id) || {}).name || id}` })),
+                    ...cfg.allowedUsers.map((id) => {
+                      const m = dir.members.find((x) => x.id === id);
+                      return { type: "user", id, label: m ? m.displayName : id, avatar: m && m.avatarUrl };
+                    }),
+                  ].map((s) => (
+                    <tr key={`${s.type}:${s.id}`} style={{ borderTop: "1px solid var(--line)" }}>
+                      <td style={{ padding: "0.35rem 0.6rem 0.35rem 0", whiteSpace: "nowrap", fontWeight: 600 }}>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
+                          {s.avatar && <img src={s.avatar} alt="" width={16} height={16} style={{ borderRadius: "50%" }} />}
+                          {s.label}
+                        </span>
+                      </td>
+                      {cfg.actions.map((a) => {
+                        const on = has(a, s.type, s.id);
+                        return (
+                          <td key={a} style={{ padding: "0.2rem 0.4rem", textAlign: "center" }}>
+                            <button
+                              onClick={() => setGrant(a, s.type, s.id, !on)} disabled={busy}
+                              aria-label={`${s.label} /${a}`}
+                              title={`${s.label} — /${a}`}
+                              className={`btn ${on ? "btn-primary" : "btn-ghost"}`}
+                              style={{ padding: "0.1rem 0.45rem", fontSize: "0.72rem", minWidth: 30 }}
+                            >
+                              {on ? "✓" : "–"}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {dir.membersNeedIntent ? (
             // Listing members is the one thing that needs a privileged intent. Rather
             // than fail quietly, say what to switch on — and keep the id path working.
@@ -294,6 +439,9 @@ export default function DiscordBotPanel({ world }) {
           )}
         </div>
       )}
+
+      {/* ---- audit log ---- */}
+      {cfg.authorized && <ActionLog world={world} />}
 
       {/* ---- what the commands are ---- */}
       {cfg.authorized && (
