@@ -13,6 +13,17 @@ export async function GET(_req, { params }) {
   boot();
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
+
+  // Self-heal: a bot that's switched on but not connected should come back by itself.
+  // boot() only sweeps once per server start, so a token that arrives later — or a
+  // connection that died for good — would otherwise stay down until the app restarted,
+  // showing Offline in Discord with no way to fix it from here. startBot no-ops when
+  // the same token is already connected, so this is safe to reach on every poll.
+  const cfg = bot.readConfig(params.id);
+  if (cfg.enabled && cfg.token && !bot.botStatus(params.id).connected) {
+    bot.startBot(params.id).catch(() => {});
+  }
+
   return NextResponse.json({
     ok: true,
     config: cfgLib.publicConfig(w),
