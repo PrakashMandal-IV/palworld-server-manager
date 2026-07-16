@@ -3,12 +3,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslation, Trans } from "react-i18next";
 import { api, Icon, toast } from "@/components/ui";
+// The permission maths is pure and lives with the rules it enforces, so the grid can
+// apply a change locally and post it, rather than waiting on a round-trip to redraw.
+import { setGrant as nextGrant, grantAll, revokeAll, subjects } from "@/lib/discord-bot-config";
 
-// Set up a world's own Discord bot: paste a token, invite it, link it with /authorize
-// in Discord, then choose who is allowed to drive the server.
-//
-// The token is write-only from here on: the server hands back only a masked hint, so
-// there is nothing to read back out of the page once it's saved.
 // Who did what, and when. Refusals are in here too — the point of a record like this
 // is answering "who tried to stop the server", not only who managed it.
 function ActionLog({ world }) {
@@ -39,7 +37,15 @@ function ActionLog({ world }) {
     denied: { color: "var(--warn, #faa61a)" },
     error: { color: "var(--danger, #ed4245)" },
   };
-  const sel = { padding: "0.3rem 0.4rem", fontSize: "0.78rem" };
+  // minmax(0,1fr) is what lets them actually share the row: without the 0 floor a long
+  // username in the people list would push its column wider and wrap the rest.
+  const sel = { padding: "0.3rem 0.4rem", fontSize: "0.78rem", minWidth: 0, width: "100%" };
+  const filterRow = {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "0.4rem",
+    marginBottom: "0.7rem",
+  };
 
   return (
     <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
@@ -51,7 +57,7 @@ function ActionLog({ world }) {
       </div>
       <p className="subtle" style={{ fontSize: "0.78rem" }}>{t("bot.logDesc")}</p>
 
-      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.7rem" }}>
+      <div style={filterRow}>
         <select className="input" style={sel} value={f.days} onChange={(e) => setF({ ...f, days: e.target.value })}>
           <option value="1">{t("bot.last24h")}</option>
           <option value="7">{t("bot.last7d")}</option>
@@ -97,6 +103,11 @@ function ActionLog({ world }) {
   );
 }
 
+// Set up a world's own Discord bot: paste a token, invite it, link it with /authorize
+// in Discord, then choose who is allowed to drive the server.
+//
+// The token is write-only from here on: the server hands back only a masked hint, so
+// there is nothing to read back out of the page once it's saved.
 export default function DiscordBotPanel({ world }) {
   const { t } = useTranslation();
   const [cfg, setCfg] = useState(null);
@@ -172,13 +183,39 @@ export default function DiscordBotPanel({ world }) {
     finally { setBusy(false); }
   };
 
+  // Apply a permission change on the spot, then tell the server.
+  //
+  // Waiting for the round-trip meant every click disabled the whole grid and list until
+  // it came back, so ticking a few boxes made the panel flash. The maths is the same
+  // pure function the server runs, so the optimistic result matches what comes back;
+  // if the request fails we put the old config back and say so.
+  const applyPerms = async (permissions, body) => {
+    const prev = cfg;
+    const subs = subjects(permissions);
+    setCfg({ ...cfg, permissions, allowedRoles: subs.roles, allowedUsers: subs.users });
+    try {
+      const r = await api(`/api/worlds/${world.world_id}/discord-bot`, { method: "POST", body });
+      setCfg(r.config);
+    } catch (e) {
+      setCfg(prev);
+      toast(e.message, "error");
+    }
+  };
+
   // Adding someone means every action — that's what "let them use the bot" means
   // before you narrow it down. Removing takes back the lot.
-  const grantSubject = (type, id, grant) => save({ subject: { type, id, grant } });
+  const grantSubject = (type, id, grant) =>
+    applyPerms(
+      grant ? grantAll(cfg.permissions, type, id) : revokeAll(cfg.permissions, type, id),
+      { subject: { type, id, grant } }
+    );
+
   // One cell of the grid: this subject, this action, on or off.
-  const setGrant = (action, type, id, on) => save({ grant: { action, type, id, on } });
+  const setGrant = (action, type, id, on) =>
+    applyPerms(nextGrant(cfg.permissions, action, type, id, on), { grant: { action, type, id, on } });
 
   const toggleRole = (id) => grantSubject("role", id, !cfg.allowedRoles.includes(id));
+  const toggleUser = (id) => grantSubject("user", id, !cfg.allowedUsers.includes(id));
   const addUser = () => {
     const id = userId.trim();
     if (!/^\d{5,25}$/.test(id)) { toast(t("bot.badUserId"), "error"); return; }
@@ -292,7 +329,7 @@ export default function DiscordBotPanel({ world }) {
               const on = cfg.allowedRoles.includes(r.id);
               return (
                 <button
-                  key={r.id} onClick={() => toggleRole(r.id)} disabled={busy}
+                  key={r.id} onClick={() => toggleRole(r.id)}
                   className={`btn ${on ? "btn-primary" : "btn-ghost"}`}
                   style={{ padding: "0.25rem 0.6rem", fontSize: "0.78rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
                   title={`@${r.name}`}
@@ -363,7 +400,7 @@ export default function DiscordBotPanel({ world }) {
                         return (
                           <td key={a} style={{ padding: "0.2rem 0.4rem", textAlign: "center" }}>
                             <button
-                              onClick={() => setGrant(a, s.type, s.id, !on)} disabled={busy}
+                              onClick={() => setGrant(a, s.type, s.id, !on)}
                               aria-label={`${s.label} /${a}`}
                               title={`${s.label} — /${a}`}
                               className={`btn ${on ? "btn-primary" : "btn-ghost"}`}
@@ -403,8 +440,7 @@ export default function DiscordBotPanel({ world }) {
                     const on = cfg.allowedUsers.includes(m.id);
                     return (
                       <button
-                        key={m.id} onClick={() => (on ? removeUser(m.id) : save({ allowedUsers: [...cfg.allowedUsers, m.id] }))}
-                        disabled={busy}
+                        key={m.id} onClick={() => toggleUser(m.id)}
                         style={{
                           width: "100%", display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.45rem 0.7rem",
                           background: on ? "var(--accent)" : "transparent", color: on ? "#fff" : "var(--ink)",
