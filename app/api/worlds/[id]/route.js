@@ -7,6 +7,7 @@ const ini = require("@/lib/ini");
 const steam = require("@/lib/steamcmd");
 const { conflictsInRegistry } = require("@/lib/ports");
 const guard = require("@/lib/installdir");
+const trash = require("@/lib/trash");
 const { boot } = require("@/lib/bootstrap");
 
 export const dynamic = "force-dynamic";
@@ -159,11 +160,13 @@ export async function DELETE(req, { params }) {
 
   if (sup.isRunning(w.world_id)) await sup.stopWorld(w.world_id, { graceful: false });
   if (deleteFiles && fs.existsSync(w.install_dir)) {
-    // Report a failed delete instead of swallowing it — the profile used to vanish
-    // while the files stayed, leaving no way to find or retry them.
-    try { fs.rmSync(w.install_dir, { recursive: true, force: true }); }
+    // Move the folder to the Recycle Bin / Trash rather than erasing it, so even a
+    // wrong call is recoverable. Report a failed delete instead of swallowing it —
+    // the profile used to vanish while the files stayed, with no way to retry — and
+    // never fall back to a permanent delete on failure.
+    try { trash.trashPath(w.install_dir); }
     catch (e) {
-      return NextResponse.json({ ok: false, error: `Could not delete ${w.install_dir}: ${e.message}` }, { status: 500 });
+      return NextResponse.json({ ok: false, error: `Could not move ${w.install_dir} to the Recycle Bin: ${e.message}` }, { status: 500 });
     }
   }
   dbm.deleteWorld(params.id);
