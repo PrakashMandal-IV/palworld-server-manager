@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - A per-world toggle for the legacy `-useperfthreads` launch flags, on by default.
 - The Live Map now uses the current, icon-free world map at a higher resolution.
 - Fixed: deleting a server could delete the folder above it, taking other servers with it.
+- Fixed: a server could get stuck with an empty admin password, spamming REST "Unauthorized" and hiding live info.
 
 ### Added
 - **Run a world from Discord.** A new **Discord Bot** tab on each world sets up your own
@@ -147,6 +148,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **A failed file delete no longer passes silently.** The profile used to disappear
   while the files stayed behind (e.g. locked by another process), with no error and no
   way to find them again. The delete now reports what went wrong and keeps the profile.
+- **Servers stuck with an empty admin password.** A world could get stuck logging
+  `REST accessed endpoint / Unauthorized (AdminPassword is empty)` on repeat, with no
+  live player or status info — and setting the password in the Admin tab didn't help.
+  Palworld only reads the admin password at boot and rewrites its config on shutdown,
+  so a blank password it had once loaded kept coming back on every restart. The app now
+  re-applies the world's admin password and REST settings into the config right before
+  each launch (generating one if it's somehow missing), so REST authentication works
+  from the first start and stays fixed across restarts.
 
 ## [2.3.0] — 2026-07-15
 
