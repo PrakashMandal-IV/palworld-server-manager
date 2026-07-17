@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export async function GET(_req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
-  const r = ini.readRawSettings(w.install_dir);
+  const r = ini.readRawSettings(w.install_dir, w.platform);
   return NextResponse.json({
     ok: true, path: r.path, exists: r.exists, content: r.content,
     running: sup.isRunning(w.world_id),
@@ -26,9 +26,9 @@ export async function POST(req, { params }) {
     return NextResponse.json({ ok: false, error: "content required" }, { status: 400 });
   }
   // Snapshot what's currently on disk so this save can always be undone.
-  const cur = ini.readRawSettings(w.install_dir);
+  const cur = ini.readRawSettings(w.install_dir, w.platform);
   if (cur.exists && cur.content) dbm.insertIniVersion(w.world_id, cur.content, "before edit");
-  const path = ini.writeRawSettings(w.install_dir, content);
+  const path = ini.writeRawSettings(w.install_dir, content, w.platform);
   // Also snapshot the newly-saved content so it appears in history as a restorable point.
   dbm.insertIniVersion(w.world_id, content, "saved");
   dbm.logEvent(w.world_id, "settings", "Edited PalWorldSettings.ini in the in-app editor (restart to apply)");

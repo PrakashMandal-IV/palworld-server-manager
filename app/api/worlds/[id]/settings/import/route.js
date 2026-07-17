@@ -26,7 +26,7 @@ export async function POST(req, { params }) {
   if (!Object.keys(incoming).length) return NextResponse.json({ ok: false, error: "No OptionSettings found" }, { status: 400 });
 
   // merge incoming (minus managed keys) onto current ini
-  const cur = ini.readSettings(w.install_dir).options;
+  const cur = ini.readSettings(w.install_dir, w.platform).options;
   const merged = { ...cur };
   let applied = 0;
   for (const [k, v] of Object.entries(incoming)) { if (!MANAGED.has(k)) { merged[k] = v; applied++; } }
@@ -36,7 +36,7 @@ export async function POST(req, { params }) {
   merged.RESTAPIEnabled = w.rest_api_enabled ? "True" : "False";
   merged.AdminPassword = `"${w.admin_password || ""}"`;
   merged.RCONEnabled = w.rcon_enabled ? "True" : "False";
-  ini.writeSettings(w.install_dir, merged);
+  ini.writeSettings(w.install_dir, merged, w.platform);
   dbm.logEvent(w.world_id, "settings", `Imported ${applied} settings (restart to apply)`);
   return NextResponse.json({ ok: true, applied });
 }

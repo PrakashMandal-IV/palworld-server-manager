@@ -14,9 +14,9 @@ export async function POST(_req, { params }) {
   const v = dbm.getIniVersion(w.world_id, Number(params.vid));
   if (!v) return NextResponse.json({ ok: false, error: "version not found" }, { status: 404 });
 
-  const cur = ini.readRawSettings(w.install_dir);
+  const cur = ini.readRawSettings(w.install_dir, w.platform);
   if (cur.exists && cur.content) dbm.insertIniVersion(w.world_id, cur.content, "before restore");
-  const path = ini.writeRawSettings(w.install_dir, v.content);
+  const path = ini.writeRawSettings(w.install_dir, v.content, w.platform);
   dbm.insertIniVersion(w.world_id, v.content, `restored from #${v.id}`);
   dbm.logEvent(w.world_id, "settings", `Restored PalWorldSettings.ini from history #${v.id} (restart to apply)`);
   return NextResponse.json({ ok: true, path, content: v.content, running: sup.isRunning(w.world_id) });

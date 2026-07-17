@@ -19,7 +19,7 @@ const MANAGED = new Set([
 export async function GET(_req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
-  const s = ini.readSettings(w.install_dir);
+  const s = ini.readSettings(w.install_dir, w.platform);
   // Report which keys are actually present in the ini so the editor can show
   // "set" vs "default (not written)" and only save real changes.
   const presentKeys = Object.keys(s.options).filter((k) => !MANAGED.has(k));
@@ -40,7 +40,7 @@ export async function POST(req, { params }) {
   const body = await req.json();
   const changed = body.changed || body.options || {};
 
-  const cur = ini.readSettings(w.install_dir).options; // real current ini (source of truth)
+  const cur = ini.readSettings(w.install_dir, w.platform).options; // real current ini (source of truth)
   const merged = { ...cur };
 
   // apply only changed, non-managed keys
@@ -59,7 +59,7 @@ export async function POST(req, { params }) {
   if (w.rcon_enabled) { merged.RCONPort = String(w.rcon_port); merged.RCONEnabled = "True"; }
   else merged.RCONEnabled = "False";
 
-  const path = ini.writeSettings(w.install_dir, merged);
+  const path = ini.writeSettings(w.install_dir, merged, w.platform);
   dbm.logEvent(w.world_id, "settings", `Saved ${Object.keys(changed).length} change(s) to PalWorldSettings.ini (restart to apply)`);
   return NextResponse.json({ ok: true, path, written: Object.keys(merged).length });
 }
