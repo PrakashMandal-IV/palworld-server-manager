@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   check status, and kick someone — with a say over who may do which.
 - Servers now start without the black command window — no more clutter next to the app.
 - The app can now start itself when you log in to Windows or Linux — on by default.
+- A per-world toggle for the legacy `-useperfthreads` launch flags, on by default.
 - Fixed: deleting a server could delete the folder above it, taking other servers with it.
 
 ### Added
@@ -63,6 +64,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   Settings → **Start automatically at login** turns it off. Windows registers this
   through its normal sign-in apps list; Linux drops a standard autostart entry for
   your desktop environment to pick up.
+
+- **A toggle for the legacy multithreading launch flags.** Reported in
+  [#11](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/11): every
+  world has always launched with `-useperfthreads`, `-NoAsyncLoadingThread`, and
+  `-UseMultithreadForDS`, with no way to turn them off. Palworld's engine has handled
+  multithreading on its own since 1.0, so these can now hurt more than help on some
+  setups. Each world's **Admin** tab has a new **Legacy performance flags** toggle —
+  on by default, so nothing changes for any existing or new world unless you switch
+  it off.
 
 - **Servers start without a console window.** The black command window that opened
   beside the app is gone. It's on by default; if you read that window (it's the only
