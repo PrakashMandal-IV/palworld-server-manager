@@ -28,7 +28,12 @@ export default function Shell({ children }) {
   const jobSummary = summarize(jobs);
 
   useEffect(() => {
-    fetch("/api/app/version").then((r) => r.json()).then(setVer).catch(() => {});
+    const load = () => fetch("/api/app/version").then((r) => r.json()).then(setVer).catch(() => {});
+    load();
+    // Re-check every 30 min so an open window keeps the update badge current. The
+    // server caches the GitHub lookup on the same cadence, so this stays cheap.
+    const id = setInterval(load, 30 * 60 * 1000);
+    return () => clearInterval(id);
   }, []);
 
   const openRelease = () => {

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // Discord webhook/notify-events/chat-relay moved to per-world (world Admin tab).
-const KEYS = ["theme", "backupRetention", "chatCaptureEnabled", "hideConsoleWindow", "language", "onboarded"];
+const KEYS = ["theme", "backupRetention", "chatCaptureEnabled", "hideConsoleWindow", "language", "onboarded", "autoUpdateEnabled", "updateCheckIntervalMinutes"];
 
 // Read a setting, normalising the "never chosen" cases. getSetting only falls back when
 // the row is missing, so a row holding null would otherwise reach the UI as null.
@@ -41,5 +41,7 @@ function defaultFor(k) {
   if (k === "hideConsoleWindow") return true;
   if (k === "language") return "en";
   if (k === "onboarded") return false;
+  if (k === "autoUpdateEnabled") return false;
+  if (k === "updateCheckIntervalMinutes") return 30;
   return "";
 }
