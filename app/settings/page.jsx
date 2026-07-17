@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [switching, setSwitching] = useState(false);
   const [catalog, setCatalog] = useState(null); // null=loading, {checked,packs}=loaded
   const [busyCode, setBusyCode] = useState(""); // code currently installing/updating/deleting
+  const [autoLaunch, setAutoLaunchState] = useState(null);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     api("/api/settings/backup-dir").then((r) => { setBackupLoc(r.backup); setBackupPath(r.backup.custom ? r.backup.path : ""); }).catch(() => {});
     api("/api/i18n/languages").then((r) => setLangs(r.languages || [])).catch(() => {});
     loadCatalog();
+    if (isElectron) window.desktop.getAutoLaunch().then(setAutoLaunchState).catch(() => setAutoLaunchState(true));
   }, []);
 
   const loadCatalog = (force) =>
@@ -91,6 +93,14 @@ export default function SettingsPage() {
     if (!isElectron) return;
     const p = await window.desktop.pickDirectory();
     if (p) setBackupPath(p);
+  };
+
+  const toggleAutoLaunch = async () => {
+    if (!isElectron || autoLaunch === null) return;
+    const next = !autoLaunch;
+    setAutoLaunchState(next);
+    try { await window.desktop.setAutoLaunch(next); }
+    catch (e) { setAutoLaunchState(!next); toast(e.message, "error"); }
   };
 
   const save = async (patch) => {
@@ -242,6 +252,19 @@ export default function SettingsPage() {
           </span>
         </div>
       </div>
+
+      {isElectron && (
+        <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+          <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.autoLaunchTitle")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <button className={`btn ${autoLaunch !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+              onClick={toggleAutoLaunch} disabled={autoLaunch === null}>
+              {autoLaunch !== false ? t("common.on") : t("common.off")}
+            </button>
+            <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>{t("settings.autoLaunchDesc")}</span>
+          </div>
+        </div>
+      )}
 
       <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
         <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.hideConsoleTitle")}</h3>

@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Run a world from Discord with your own bot: start, stop, restart, broadcast, back up,
   check status, and kick someone — with a say over who may do which.
 - Servers now start without the black command window — no more clutter next to the app.
+- The app can now start itself when you log in to Windows or Linux — on by default.
 - Fixed: deleting a server could delete the folder above it, taking other servers with it.
 
 ### Added
@@ -55,6 +56,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - **`/kick`, without hunting for an ID.** Pick whoever's playing from a list Discord
   fills in as you type, and see who's left afterwards. Only people allowed to kick can
   see that list.
+
+- **Starts with Windows or Linux.** The app now offers to launch itself when you log
+  in, so a server can come back up without you having to open the app first. It's on
+  by default for new installs and for anyone updating from an earlier version;
+  Settings → **Start automatically at login** turns it off. Windows registers this
+  through its normal sign-in apps list; Linux drops a standard autostart entry for
+  your desktop environment to pick up.
 
 - **Servers start without a console window.** The black command window that opened
   beside the app is gone. It's on by default; if you read that window (it's the only
