@@ -3,11 +3,17 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.4.0] — 2026-07-17
+## [2.4.0] — 2026-07-18
 
 ### At a glance
 - Run a world from Discord with your own bot: start, stop, restart, broadcast, back up,
-  check status, and kick someone — with a say over who may do which.
+  check status, kick someone, and see where players are on the live map — with a say
+  over who may do which.
+- Optional automatic server updates: opt in and a server updates itself when a new build
+  ships, warning players first. The app itself is only ever shown updates, never
+  auto-updated.
+- Deleting a server, mod, or save now sends the old files to the Recycle Bin (Windows)
+  or Trash (Linux) instead of erasing them.
 - Servers now start without the black command window — no more clutter next to the app.
 - The app can now start itself when you log in to Windows or Linux — on by default.
 - A per-world toggle for the legacy `-useperfthreads` launch flags, on by default.
@@ -59,6 +65,12 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   fills in as you type, and see who's left afterwards. Only people allowed to kick can
   see that list.
 
+- **`/player-location`, on the live map.** Posts the world map to your channel with a
+  dot for each online player, each labelled with their name — the same map the app's
+  Live Map tab shows. A menu under it filters the map down to just the players you pick
+  (choose several at once). Like the other commands it's permission-gated, and it needs
+  the world's REST API switched on so the server can report positions.
+
 - **Starts with Windows or Linux.** The app now offers to launch itself when you log
   in, so a server can come back up without you having to open the app first. It's on
   by default for new installs and for anyone updating from an earlier version;
@@ -90,6 +102,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   ports, same REST API, same save data, and it still keeps running if you close the
   app. Servers whose folder doesn't have that build fall back to the launcher and start
   as before.
+
+- **Automatic server updates, if you want them.**
+  ([#8](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/8)) Off by
+  default. Turn it on in Settings and the app updates any server that's fallen behind the
+  latest public build on its own: players get an in-game warning every minute for five
+  minutes, then the server is stopped, a safety backup is taken, SteamCMD updates it, and
+  it's brought back up. The build check runs on its own schedule (every 30 minutes by
+  default, and configurable) so the **update available** badges stay accurate whether or
+  not automatic updates are on. New versions of the app itself are only ever surfaced —
+  the packaged app is never updated for you.
+
+- **Deletions go to the Recycle Bin, not the void.** Deleting a server's files, removing
+  a mod, or restoring a backup over the live save now moves the old files to the Recycle
+  Bin on Windows or the Trash on Linux, so a mistake stays recoverable. If the move can't
+  be done it stops and says why, rather than falling back to erasing anything.
 
 ### Changed
 - **A cleaner, sharper Live Map.** The bundled world map is now the current

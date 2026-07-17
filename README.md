@@ -27,11 +27,13 @@ a server (new or existing), and manage everything from a clean interface.
 - **Provision new servers** via SteamCMD, or **adopt an existing** Palworld dedicated
   server install (it keeps your world, settings, and admin password).
 - **Start / stop / restart / update** each world with one click. A crash guardian can
-  automatically restart a server that goes down.
+  automatically restart a server that goes down, and an optional **auto-update** keeps a
+  world on the latest Palworld build — warning players in-game before it restarts to apply.
 - **Full settings editor** — every option from `PalWorldSettings.ini` (100+ settings)
   grouped into readable sections, with search, per-field reset, and community-tested
   presets. Only the settings you change are written, so nothing else is disturbed.
 - **Players** — see who's online; kick / ban / unban through the official REST API.
+- **Live Map** — plot online players on the world map in real time.
 - **Console** — live server log stream.
 - **Backups** — take, restore, and schedule world backups.
 - **Schedule** — automatic restarts / backups on an interval or at a set time.
@@ -40,6 +42,10 @@ a server (new or existing), and manage everything from a clean interface.
 - **Discord notifications** — post server events (start, stop, restart, crash, backup,
   update) to Discord and relay in-game chat. Add several webhook **channels** per world
   and route each event to whichever channel you want.
+- **Discord bot** — run a world from your own bot with slash commands: `/start`,
+  `/stop`, `/restart`, `/broadcast`, `/backup`, `/status`, `/kick`, and
+  `/player-location` (posts the live map with each online player's dot and name). You
+  choose who may use each command; the bot only ever answers its own commands.
 - **Languages** — use the app in English, Spanish, Japanese, or Chinese, switched from
   Settings and applied instantly. Install more community translation packs from GitHub
   in one click, or bring your own — no restart needed.
@@ -48,6 +54,8 @@ a server (new or existing), and manage everything from a clean interface.
   moving between machines.
 - **Multiple worlds** side by side, each with its own ports (auto-assigned to avoid
   collisions).
+- **Safe deletes** — removing a server's files, a mod, or a save moves them to the
+  Recycle Bin (Windows) or Trash (Linux), so a mistake stays recoverable.
 
 ---
 
