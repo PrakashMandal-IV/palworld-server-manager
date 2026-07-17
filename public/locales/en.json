@@ -364,6 +364,9 @@
     "admin.winePrefix": "Wine prefix (WINEPREFIX)",
     "admin.winePrefixPlaceholder": "Leave blank for an auto-managed prefix",
     "admin.stopBeforeWine": "Stop the world before changing Wine settings.",
+    "admin.wineLaunchFlags": "Wine launch flags",
+    "admin.wineLaunchFlagsPlaceholder": "e.g. --version",
+    "admin.wineLaunchFlagsHint": "Passed to the wine command itself, before the server executable — not the same as the launch arguments above, which go to the server.",
 
     "common.save": "Save",
     "common.edit": "Edit",

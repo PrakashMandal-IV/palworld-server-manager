@@ -13,6 +13,7 @@ export default function AdminPanel({ world, running, onChange }) {
   const [envVars, setEnvVars] = useState(envObjectToText(world.env_vars));
   const [wineBinary, setWineBinary] = useState(world.wine_binary || "wine");
   const [winePrefix, setWinePrefix] = useState(world.wine_prefix || "");
+  const [wineLaunchFlags, setWineLaunchFlags] = useState(world.wine_launch_flags || "");
   const [autostart, setAutostart] = useState(!!world.autostart);
   const [crashGuard, setCrashGuard] = useState(!!world.crash_guard);
   const [community, setCommunity] = useState(!!world.community_server);
@@ -85,7 +86,11 @@ export default function AdminPanel({ world, running, onChange }) {
     try {
       await api(`/api/worlds/${world.world_id}`, {
         method: "PATCH",
-        body: { wine_binary: wineBinary.trim() || "wine", wine_prefix: winePrefix.trim() || null },
+        body: {
+          wine_binary: wineBinary.trim() || "wine",
+          wine_prefix: winePrefix.trim() || null,
+          wine_launch_flags: wineLaunchFlags.trim(),
+        },
       });
       toast(t("admin.profileSaved"), "success");
       onChange();
@@ -124,7 +129,7 @@ export default function AdminPanel({ world, running, onChange }) {
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="label">{t("admin.extraArgs")}</label>
-            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="-e.g. -NoAsyncLoadingThread" />
+            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="-e.g. -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS" />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="label">{t("admin.envVars")}</label>
@@ -151,6 +156,13 @@ export default function AdminPanel({ world, running, onChange }) {
               <div>
                 <label className="label">{t("admin.winePrefix")}</label>
                 <input className="input" value={winePrefix} onChange={(e) => setWinePrefix(e.target.value)} disabled={running} placeholder={t("admin.winePrefixPlaceholder")} />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="label">{t("admin.wineLaunchFlags")}</label>
+                <input className="input" value={wineLaunchFlags} onChange={(e) => setWineLaunchFlags(e.target.value)} disabled={running} placeholder={t("admin.wineLaunchFlagsPlaceholder")} />
+                <p className="subtle" style={{ fontWeight: 600, fontSize: "0.74rem", marginTop: 4 }}>
+                  {t("admin.wineLaunchFlagsHint")}
+                </p>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.7rem" }}>

@@ -74,7 +74,7 @@ export async function PATCH(req, { params }) {
     dbm.logEvent(params.id, "settings", `Install folder changed to ${info.installDir}`);
   }
 
-  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "env_vars", "wine_binary", "wine_prefix", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message"];
+  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "env_vars", "wine_binary", "wine_prefix", "wine_launch_flags", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message"];
   const clean = {};
   for (const k of allowed) if (k in patch) clean[k] = patch[k];
   // notify_events is stored as a JSON string column; accept an object from the client.
@@ -95,7 +95,8 @@ export async function PATCH(req, { params }) {
   // reject changing wine_prefix or wine_binary while the world is running, since that's a live-only setting
   // that wouldn't apply until restart anyway and could confuse the running process's state
   // same pattern as the install_dir / ports checks already in this file,
-  if (["wine_binary", "wine_prefix"].some((k) => k in clean) && (sup.isRunning(w.world_id) || sup.pidAlive(w.process_id))) {
+  // same running-world guard covers wine_launch_flags too
+  if (["wine_binary", "wine_prefix", "wine_launch_flags"].some((k) => k in clean) && (sup.isRunning(w.world_id) || sup.pidAlive(w.process_id))) {
     return NextResponse.json({ ok: false, error: "Stop the world before changing Wine settings." }, { status: 409 });
   }
 
