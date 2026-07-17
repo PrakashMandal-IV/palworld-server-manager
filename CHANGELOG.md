@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Servers now start without the black command window — no more clutter next to the app.
 - The app can now start itself when you log in to Windows or Linux — on by default.
 - A per-world toggle for the legacy `-useperfthreads` launch flags, on by default.
+- The Live Map now uses the current, icon-free world map at a higher resolution.
 - Fixed: deleting a server could delete the folder above it, taking other servers with it.
 
 ### Added
@@ -89,6 +90,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   ports, same REST API, same save data, and it still keeps running if you close the
   app. Servers whose folder doesn't have that build fall back to the launcher and start
   as before.
+
+### Changed
+- **A cleaner, sharper Live Map.** The bundled world map is now the current
+  post-Feybreak render (Palpagos + Sakurajima + Feybreak) at 2048×2048, with no
+  marker icons cluttering the terrain — just the map, with player dots on top.
+  It's framed identically to the previous image, so existing calibration and any
+  player positions you've calibrated stay accurate — nothing to redo.
 
 ### Fixed
 - **Deleting a server could wipe a whole folder of servers.** Reported in
