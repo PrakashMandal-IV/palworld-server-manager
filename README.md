@@ -1,5 +1,7 @@
 # Palworld Server Manager
 
+[English](README.md) | [中文](README_zh.md)
+
 A desktop app for Windows and Linux that makes running one or more **Palworld dedicated
 servers** simple — no command line, no editing config files by hand. Install it, point it at
 a server (new or existing), and manage everything from a clean interface.
