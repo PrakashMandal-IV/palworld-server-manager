@@ -42,7 +42,9 @@ a server (new or existing), and manage everything from a clean interface.
 - **Console** — live server log stream.
 - **Backups** — take, restore, and schedule world backups.
 - **Schedule** — automatic restarts / backups on an interval or at a set time.
-- **Mods** — import and toggle server mods.
+- **Mods** — import and toggle Steam Workshop mods, install **UE4SS**, and install
+  **PalSchema** plus its JSON content mods (the kind published on Nexus) — one-click
+  framework install, import, enable/disable, and remove, all from the Mods tab.
 - **Chat & Broadcast** — read in-game chat live and send announcements to players.
 - **Discord notifications** — post server events (start, stop, restart, crash, backup,
   update) to Discord and relay in-game chat. Add several webhook **channels** per world

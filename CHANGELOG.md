@@ -11,8 +11,18 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - Pick a world's target platform (Windows or Linux) when you create it, independent of
   the machine you're running on.
 - Per-world Wine settings (binary, prefix, launch flags) and custom environment variables.
+- **PalSchema mod support** — install the framework in one click and import the JSON
+  data-table/blueprint mods (the kind published on Nexus) straight from the Mods tab.
 
 ### Added
+- **PalSchema mods.** The Mods tab can now install the [PalSchema](https://github.com/Okaetsu/PalSchema)
+  framework (downloaded from GitHub, or from a zip you provide) and import, enable/disable,
+  and remove its content mods — the JSON mods that edit Palworld's data tables and
+  blueprints, common on Nexus. Mods land in `ue4ss/Mods/PalSchema/mods`, PalSchema is
+  wired into `mods.txt` automatically, and disabling a mod parks it rather than deleting
+  it. Requires UE4SS (installed in the same tab) and a Windows-target world — which, with
+  the Wine support above, can be hosted on Linux too. Mods that also ship packaged assets
+  (`.pak`) are flagged, since PalSchema loads only the JSON part.
 - **Cross-platform provisioning.** SteamCMD can now fetch the Windows *or* Linux server
   files regardless of the host OS (`@sSteamCmdForcePlatformType`), so a Linux machine can
   install a Windows-target server. A platform picker appears when creating a world, and
