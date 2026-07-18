@@ -3,6 +3,160 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] — 2026-07-18
+
+### At a glance
+- Run a world from Discord with your own bot: start, stop, restart, broadcast, back up,
+  check status, kick someone, and see where players are on the live map — with a say
+  over who may do which.
+- Optional automatic server updates: opt in and a server updates itself when a new build
+  ships, warning players first. The app itself is only ever shown updates, never
+  auto-updated.
+- Deleting a server, mod, or save now sends the old files to the Recycle Bin (Windows)
+  or Trash (Linux) instead of erasing them.
+- Servers now start without the black command window — no more clutter next to the app.
+- The app can now start itself when you log in to Windows or Linux — on by default.
+- A per-world toggle for the legacy `-useperfthreads` launch flags, on by default.
+- The Live Map now uses the current, icon-free world map at a higher resolution.
+- Fixed: deleting a server could delete the folder above it, taking other servers with it.
+- Fixed: a server could get stuck with an empty admin password, spamming REST "Unauthorized" and hiding live info.
+
+### Added
+- **Run a world from Discord.** A new **Discord Bot** tab on each world sets up your own
+  bot in four steps, giving you `/start`, `/stop`, `/restart`, `/broadcast`, `/backup`,
+  `/status` and `/kick` in your Discord server. The Info page has a step-by-step guide to
+  making the bot itself.
+
+  It's your bot, not ours. You create it in Discord's developer portal and paste its
+  token, which stays on this computer: it's never displayed again, never sent anywhere
+  else, and you can revoke it from Discord whenever you like. The invite link asks for
+  **no permissions at all** — the bot can't read messages and can't post on its own, it
+  only ever answers its own commands. Everything runs from this app, so the commands work
+  while it's open and stop when it closes.
+
+  A Discord server is linked to a world with `/authorize`, which asks for the world's
+  admin password in a private box only you can see. A slash command's options are shown
+  to the whole channel, so a password could never be one of them. Five wrong tries locks
+  that person out for fifteen minutes, and the bot only ever works in the one server you
+  linked it to.
+
+- **A say over who can do what.** Nobody can use the bot until you name them — an empty
+  list means nobody, not everybody. Pick roles and people out of your Discord server's
+  own lists, with their icons, avatars and display names, then tick per command: someone
+  can be allowed to take a backup without being allowed to stop the server. Whoever runs
+  `/authorize` gets everything, so a fresh setup is usable straight away.
+
+  Listing people needs the **Server Members Intent** switched on for your bot; the panel
+  says so and links to how, and you can always add someone by ID instead.
+
+- **An activity log.** Every command anyone runs from Discord is recorded — including
+  the ones that were refused, because "who tried to stop the server at 3am" is the
+  question a log like this exists to answer. Filter it by date, person, command or
+  outcome.
+
+- **`/status`, for the whole channel.** "Is the server up?" is a question the channel
+  has, so its answer goes to the channel rather than just whoever asked: a card with the
+  world's name, whether it's up, the in-game day, uptime, player count and who's on, plus
+  the server's name and the address people connect on from Settings → Server Identity.
+  The gear on its column in the access grid picks which of those it gives away. The
+  address appears once a Public IP is set there — left blank, the server works its own
+  out and the app can't see what it lands on.
+
+- **`/kick`, without hunting for an ID.** Pick whoever's playing from a list Discord
+  fills in as you type, and see who's left afterwards. Only people allowed to kick can
+  see that list.
+
+- **`/player-location`, on the live map.** Posts the world map to your channel with a
+  dot for each online player, each labelled with their name — the same map the app's
+  Live Map tab shows. A menu under it filters the map down to just the players you pick
+  (choose several at once). Like the other commands it's permission-gated, and it needs
+  the world's REST API switched on so the server can report positions.
+
+- **Starts with Windows or Linux.** The app now offers to launch itself when you log
+  in, so a server can come back up without you having to open the app first. It's on
+  by default for new installs and for anyone updating from an earlier version;
+  Settings → **Start automatically at login** turns it off. Windows registers this
+  through its normal sign-in apps list; Linux drops a standard autostart entry for
+  your desktop environment to pick up.
+
+- **A toggle for the legacy multithreading launch flags.** Reported in
+  [#11](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/11): every
+  world has always launched with `-useperfthreads`, `-NoAsyncLoadingThread`, and
+  `-UseMultithreadForDS`, with no way to turn them off. Palworld's engine has handled
+  multithreading on its own since 1.0, so these can now hurt more than help on some
+  setups. Each world's **Admin** tab has a new **Legacy performance flags** toggle —
+  on by default, so nothing changes for any existing or new world unless you switch
+  it off.
+
+- **Servers start without a console window.** The black command window that opened
+  beside the app is gone. It's on by default; if you read that window (it's the only
+  place Palworld's raw server output shows up), Settings → **Hide the server console
+  window** turns it back on.
+
+  The window never came from how the app launched the server. Palworld ships the
+  dedicated server as three programs: `PalServer.exe` is a small launcher, and the
+  server itself is built twice — once as a windowed program and once as a console one.
+  The launcher started the console build, and Windows gives a console program without a
+  console of its own a real window. That window belonged to a program the app never
+  launched directly, so no amount of "hide this window" on the app's side could reach
+  it. Now the app just starts the windowed build itself. It's the same server — same
+  ports, same REST API, same save data, and it still keeps running if you close the
+  app. Servers whose folder doesn't have that build fall back to the launcher and start
+  as before.
+
+- **Automatic server updates, if you want them.**
+  ([#8](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/8)) Off by
+  default. Turn it on in Settings and the app updates any server that's fallen behind the
+  latest public build on its own: players get an in-game warning every minute for five
+  minutes, then the server is stopped, a safety backup is taken, SteamCMD updates it, and
+  it's brought back up. The build check runs on its own schedule (every 30 minutes by
+  default, and configurable) so the **update available** badges stay accurate whether or
+  not automatic updates are on. New versions of the app itself are only ever surfaced —
+  the packaged app is never updated for you.
+
+- **Deletions go to the Recycle Bin, not the void.** Deleting a server's files, removing
+  a mod, or restoring a backup over the live save now moves the old files to the Recycle
+  Bin on Windows or the Trash on Linux, so a mistake stays recoverable. If the move can't
+  be done it stops and says why, rather than falling back to erasing anything.
+
+### Changed
+- **A cleaner, sharper Live Map.** The bundled world map is now the current
+  post-Feybreak render (Palpagos + Sakurajima + Feybreak) at 2048×2048, with no
+  marker icons cluttering the terrain — just the map, with player dots on top.
+  It's framed identically to the previous image, so existing calibration and any
+  player positions you've calibrated stay accurate — nothing to redo.
+
+### Fixed
+- **Deleting a server could wipe a whole folder of servers.** Reported in
+  [#9](https://github.com/PrakashMandal-IV/palworld-server-manager/issues/9): a user
+  with `PalworldServers\Main Server` and `PalworldServers\Testing Server` deleted the
+  testing one and lost `PalworldServers` entirely — including the main server.
+
+  This happened when a server was added with the **parent** folder picked as its
+  install folder (easy to do — the Browse dialog opens on the parent, and SteamCMD
+  installs into whatever folder you give it). That server's recorded folder was then
+  `PalworldServers` itself, so deleting it with **also delete files** removed
+  everything underneath, siblings included. Nothing checked the folder first.
+
+  Two things changed. Deleting files is now refused when the folder holds another
+  registered server, is a drive root, contains the app's own data or backups, or
+  doesn't look like a Palworld server folder at all — the error names what's at risk,
+  and deleting the profile alone still works. Separately, a folder that overlaps
+  another server's is now rejected when you add or move a server, so the bad state
+  can't be created in the first place. Existing servers already pointing at a parent
+  folder are protected by the delete check.
+- **A failed file delete no longer passes silently.** The profile used to disappear
+  while the files stayed behind (e.g. locked by another process), with no error and no
+  way to find them again. The delete now reports what went wrong and keeps the profile.
+- **Servers stuck with an empty admin password.** A world could get stuck logging
+  `REST accessed endpoint / Unauthorized (AdminPassword is empty)` on repeat, with no
+  live player or status info — and setting the password in the Admin tab didn't help.
+  Palworld only reads the admin password at boot and rewrites its config on shutdown,
+  so a blank password it had once loaded kept coming back on every restart. The app now
+  re-applies the world's admin password and REST settings into the config right before
+  each launch (generating one if it's somehow missing), so REST authentication works
+  from the first start and stays fixed across restarts.
+
 ## [2.3.0] — 2026-07-15
 
 ### At a glance

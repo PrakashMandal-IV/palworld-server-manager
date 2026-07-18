@@ -8,4 +8,6 @@ contextBridge.exposeInMainWorld("desktop", {
   getSystemTheme: () => ipcRenderer.invoke("get-theme"),
   getSystemLocale: () => ipcRenderer.invoke("get-system-locale"),
   openPath: (p) => ipcRenderer.invoke("open-path", p),
+  getAutoLaunch: () => ipcRenderer.invoke("get-auto-launch"),
+  setAutoLaunch: (enabled) => ipcRenderer.invoke("set-auto-launch", enabled),
 });

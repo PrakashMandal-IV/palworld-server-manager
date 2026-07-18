@@ -6,6 +6,8 @@ const rest = require("@/lib/restclient");
 const ini = require("@/lib/ini");
 const steam = require("@/lib/steamcmd");
 const { conflictsInRegistry } = require("@/lib/ports");
+const guard = require("@/lib/installdir");
+const trash = require("@/lib/trash");
 const { boot } = require("@/lib/bootstrap");
 
 export const dynamic = "force-dynamic";
@@ -65,6 +67,8 @@ export async function PATCH(req, { params }) {
     if (!info.valid) {
       return NextResponse.json({ ok: false, error: info.reason || "Not a valid Palworld server install." }, { status: 400 });
     }
+    const bad = guard.unusableTargetReason(info.installDir, { worlds: dbm.listWorlds(), selfWorldId: params.id });
+    if (bad) return NextResponse.json({ ok: false, error: bad }, { status: 409 });
     const rebased = dbm.updateWorld(params.id, {
       install_dir: info.installDir,
       build_id: info.buildId || null,
@@ -74,7 +78,8 @@ export async function PATCH(req, { params }) {
     dbm.logEvent(params.id, "settings", `Install folder changed to ${info.installDir}`);
   }
 
-  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "env_vars", "wine_binary", "wine_prefix", "wine_launch_flags", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message"];
+  const allowed = ["display_name", "admin_password", "server_password", "autostart", "crash_guard", "rest_api_enabled", "extra_args", "env_vars", "wine_binary", "wine_prefix", "wine_launch_flags", "game_port", "query_port", "rest_api_port", "rcon_port", "community_server", "mods_enabled", "discord_webhook", "notify_events", "discord_relay_chat", "discord_webhooks", "warn_enabled", "warn_lead_minutes", "warn_interval_minutes", "warn_message", "legacy_perf_flags"];
+
   const clean = {};
   for (const k of allowed) if (k in patch) clean[k] = patch[k];
   // notify_events is stored as a JSON string column; accept an object from the client.
@@ -106,6 +111,7 @@ export async function PATCH(req, { params }) {
   }
   if ("discord_relay_chat" in clean) clean.discord_relay_chat = clean.discord_relay_chat ? 1 : 0;
   if ("warn_enabled" in clean) clean.warn_enabled = clean.warn_enabled ? 1 : 0;
+  if ("legacy_perf_flags" in clean) clean.legacy_perf_flags = clean.legacy_perf_flags ? 1 : 0;
   for (const k of ["warn_lead_minutes", "warn_interval_minutes"]) {
     if (k in clean) clean[k] = Math.max(0, parseInt(clean[k], 10) || 0);
   }
@@ -153,9 +159,35 @@ export async function DELETE(req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
   const deleteFiles = new URL(req.url).searchParams.get("files") === "1";
+
+  // Check before stopping anything: this folder is about to be rm -rf'd, and a world
+  // whose install_dir sits above another world's would take that one with it (#9).
+  if (deleteFiles && fs.existsSync(w.install_dir)) {
+    let backupsPath = null;
+    try { backupsPath = require("@/lib/backups").backupInfo().path; } catch {}
+    const reason = guard.unsafeToDeleteReason(w.install_dir, {
+      worlds: dbm.listWorlds(),
+      selfWorldId: w.world_id,
+      extraProtected: backupsPath ? [backupsPath] : [],
+    });
+    if (reason) {
+      return NextResponse.json({
+        ok: false,
+        error: `Refusing to delete ${w.install_dir} because ${reason}. Delete the profile only, then remove the folder yourself if you're sure.`,
+      }, { status: 409 });
+    }
+  }
+
   if (sup.isRunning(w.world_id)) await sup.stopWorld(w.world_id, { graceful: false });
   if (deleteFiles && fs.existsSync(w.install_dir)) {
-    try { fs.rmSync(w.install_dir, { recursive: true, force: true }); } catch {}
+    // Move the folder to the Recycle Bin / Trash rather than erasing it, so even a
+    // wrong call is recoverable. Report a failed delete instead of swallowing it —
+    // the profile used to vanish while the files stayed, with no way to retry — and
+    // never fall back to a permanent delete on failure.
+    try { trash.trashPath(w.install_dir); }
+    catch (e) {
+      return NextResponse.json({ ok: false, error: `Could not move ${w.install_dir} to the Recycle Bin: ${e.message}` }, { status: 500 });
+    }
   }
   dbm.deleteWorld(params.id);
   return NextResponse.json({ ok: true });

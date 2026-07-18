@@ -2,6 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu } = require("electron");
 const path = require("path");
 const fs = require("fs");
+const os = require("os");
 const { spawn } = require("child_process");
 const http = require("http");
 
@@ -56,6 +57,72 @@ function logToFile(msg) {
   try {
     fs.appendFileSync(path.join(dataDir(), "launcher.log"), `[${new Date().toISOString()}] ${msg}\n`);
   } catch {}
+}
+
+// ---------------------------------------------------------------------------
+// LAUNCH ON STARTUP — on by default, both for a fresh install and for anyone
+// upgrading from a version that predates this setting (no persisted choice
+// yet reads as "on"). Once the user picks a value in Settings it's persisted
+// here and sticks across restarts and future updates.
+//
+// Windows uses Electron's own Run-key API. Linux has no Electron equivalent,
+// so we manage a .desktop file under ~/.config/autostart ourselves. (No macOS
+// build is shipped, so it's left untouched with a best-effort fallback.)
+// ---------------------------------------------------------------------------
+const LINUX_AUTOSTART_FILE = path.join(os.homedir(), ".config", "autostart", "com.palworld.servermanager.desktop");
+
+function autostartConfigPath() {
+  return path.join(dataDir(), "autostart.json");
+}
+
+function readAutostartPref() {
+  try {
+    const v = JSON.parse(fs.readFileSync(autostartConfigPath(), "utf8")).enabled;
+    return typeof v === "boolean" ? v : null;
+  } catch {
+    return null; // never chosen yet
+  }
+}
+
+function writeAutostartPref(enabled) {
+  try { fs.writeFileSync(autostartConfigPath(), JSON.stringify({ enabled })); } catch (e) { logToFile(`Failed to persist autostart pref: ${e.message}`); }
+}
+
+function applyAutostart(enabled) {
+  if (process.platform === "linux") {
+    try {
+      if (enabled) {
+        fs.mkdirSync(path.dirname(LINUX_AUTOSTART_FILE), { recursive: true });
+        // Prefer the original AppImage path (electron-builder sets $APPIMAGE at
+        // launch) over process.execPath, which for an AppImage points at the
+        // extracted runtime binary rather than the file the user actually has.
+        const exe = process.env.APPIMAGE || process.execPath;
+        const entry = [
+          "[Desktop Entry]",
+          "Type=Application",
+          "Name=Palworld Server Manager",
+          `Exec="${exe}"`,
+          "X-GNOME-Autostart-enabled=true",
+          "",
+        ].join("\n");
+        fs.writeFileSync(LINUX_AUTOSTART_FILE, entry);
+      } else {
+        fs.rmSync(LINUX_AUTOSTART_FILE, { force: true });
+      }
+    } catch (e) { logToFile(`Linux autostart update failed: ${e.message}`); }
+    return;
+  }
+  // Windows (and, best-effort, any other platform): Electron owns this natively.
+  try { app.setLoginItemSettings({ openAtLogin: enabled }); } catch (e) { logToFile(`setLoginItemSettings failed: ${e.message}`); }
+}
+
+function initAutostart() {
+  let enabled = readAutostartPref();
+  if (enabled === null) {
+    enabled = true; // fresh install, or an upgrade that predates this setting
+    writeAutostartPref(enabled);
+  }
+  applyAutostart(enabled);
 }
 
 function startNextServer() {
@@ -174,6 +241,7 @@ function main() {
   app.whenReady().then(async () => {
     // Ensures Windows uses our icon (not the default Electron one) in the taskbar.
     if (process.platform === "win32") app.setAppUserModelId("com.palworld.servermanager");
+    initAutostart();
     startNextServer();
     const url = isDev ? process.env.ELECTRON_START_URL : `http://127.0.0.1:${PORT}`;
     serverReady = await waitForServer(url);
@@ -213,3 +281,12 @@ ipcMain.handle("pick-zip", async () => {
 ipcMain.handle("get-theme", () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"));
 ipcMain.handle("get-system-locale", () => app.getLocale() || "en");
 ipcMain.handle("open-path", (_e, p) => shell.openPath(p));
+ipcMain.handle("get-auto-launch", () => {
+  const v = readAutostartPref();
+  return v === null ? true : v;
+});
+ipcMain.handle("set-auto-launch", (_e, enabled) => {
+  writeAutostartPref(!!enabled);
+  applyAutostart(!!enabled);
+  return !!enabled;
+});

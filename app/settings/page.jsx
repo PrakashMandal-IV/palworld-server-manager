@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [switching, setSwitching] = useState(false);
   const [catalog, setCatalog] = useState(null); // null=loading, {checked,packs}=loaded
   const [busyCode, setBusyCode] = useState(""); // code currently installing/updating/deleting
+  const [autoLaunch, setAutoLaunchState] = useState(null);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function SettingsPage() {
     api("/api/settings/backup-dir").then((r) => { setBackupLoc(r.backup); setBackupPath(r.backup.custom ? r.backup.path : ""); }).catch(() => {});
     api("/api/i18n/languages").then((r) => setLangs(r.languages || [])).catch(() => {});
     loadCatalog();
+    if (isElectron) window.desktop.getAutoLaunch().then(setAutoLaunchState).catch(() => setAutoLaunchState(true));
   }, []);
 
   const loadCatalog = (force) =>
@@ -91,6 +93,14 @@ export default function SettingsPage() {
     if (!isElectron) return;
     const p = await window.desktop.pickDirectory();
     if (p) setBackupPath(p);
+  };
+
+  const toggleAutoLaunch = async () => {
+    if (!isElectron || autoLaunch === null) return;
+    const next = !autoLaunch;
+    setAutoLaunchState(next);
+    try { await window.desktop.setAutoLaunch(next); }
+    catch (e) { setAutoLaunchState(!next); toast(e.message, "error"); }
   };
 
   const save = async (patch) => {
@@ -218,19 +228,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
-        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.discordTitle")}</h3>
-        <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", borderLeft: "3px solid var(--yellow)" }}>
-          <div style={{ fontWeight: 800, fontSize: "0.9rem", marginBottom: 4 }}>{t("settings.discordMoved")}</div>
-          <p className="subtle" style={{ fontWeight: 600, fontSize: "0.8rem", margin: 0 }}>
-            <Trans i18nKey="settings.discordMovedDesc" components={{ b: <b /> }} />
-          </p>
-          <Link href="/" className="btn btn-primary" style={{ marginTop: "0.8rem", padding: "0.35rem 0.7rem" }}>
-            <Icon name="globe" size={15} /> {t("settings.goToWorlds")}
-          </Link>
-        </div>
-      </div>
-
-      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
         <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.chatCaptureTitle")}</h3>
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
           <button className={`btn ${s.chatCaptureEnabled !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
@@ -240,6 +237,59 @@ export default function SettingsPage() {
           <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
             <Trans i18nKey="settings.chatCaptureDesc" components={{ b: <b /> }} />
           </span>
+        </div>
+      </div>
+
+      {isElectron && (
+        <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+          <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.autoLaunchTitle")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <button className={`btn ${autoLaunch !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+              onClick={toggleAutoLaunch} disabled={autoLaunch === null}>
+              {autoLaunch !== false ? t("common.on") : t("common.off")}
+            </button>
+            <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>{t("settings.autoLaunchDesc")}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.hideConsoleTitle")}</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button className={`btn ${s.hideConsoleWindow !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+            onClick={() => save({ hideConsoleWindow: s.hideConsoleWindow === false })} disabled={saving}>
+            {s.hideConsoleWindow !== false ? t("common.on") : t("common.off")}
+          </button>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
+            <Trans i18nKey="settings.hideConsoleDesc" components={{ b: <b /> }} />
+          </span>
+        </div>
+        {s.hideConsoleWindow === false && (
+          <p className="subtle" style={{ fontSize: "0.78rem", marginBottom: 0, marginTop: "0.6rem" }}>
+            <Trans i18nKey="settings.hideConsoleWarn" components={{ b: <b /> }} />
+          </p>
+        )}
+      </div>
+
+      <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+        <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.autoUpdateTitle")}</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+          <button className={`btn ${s.autoUpdateEnabled === true ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+            onClick={() => save({ autoUpdateEnabled: s.autoUpdateEnabled !== true })} disabled={saving}>
+            {s.autoUpdateEnabled === true ? t("common.on") : t("common.off")}
+          </button>
+          <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>
+            <Trans i18nKey="settings.autoUpdateDesc" components={{ b: <b /> }} />
+          </span>
+        </div>
+        <div style={{ marginTop: "1.1rem", borderTop: "1px solid var(--border)", paddingTop: "1rem" }}>
+          <label className="label">{t("settings.updateCheckInterval")}</label>
+          <div style={{ display: "flex", gap: "0.5rem", maxWidth: 260 }}>
+            <input className="input" type="number" min="5" value={s.updateCheckIntervalMinutes ?? 30}
+              onChange={(e) => setS({ ...s, updateCheckIntervalMinutes: Number(e.target.value) })} />
+            <button className="btn btn-primary" onClick={() => save({ updateCheckIntervalMinutes: Math.max(5, Number(s.updateCheckIntervalMinutes) || 30) })} disabled={saving}>{t("common.save")}</button>
+          </div>
+          <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", margin: "0.5rem 0 0" }}>{t("settings.updateCheckIntervalHelp")}</p>
         </div>
       </div>
 
