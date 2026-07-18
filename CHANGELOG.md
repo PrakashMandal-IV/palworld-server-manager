@@ -3,6 +3,16 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.1] — Unreleased
+
+### Fixed
+- **Chat showing every message twice.** With the chat mod installed, each in-game message
+  could appear twice in the Chat tab and be relayed to Discord twice, while in-game chat
+  itself was fine. Some server/UE4SS builds now echo chat to the server console as well as
+  to the chat mod's file, and the app was capturing from both. It now treats the chat
+  mod's file as the single source when it's present, and only reads chat from the console
+  as a fallback when the mod isn't in use.
+
 ## [2.4.0] — 2026-07-18
 
 ### At a glance
