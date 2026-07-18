@@ -310,8 +310,8 @@ export default function MapPanel({ players, running, devCalibrate = false }) {
 
         {/* zoom controls */}
         <div style={{ position: "absolute", right: 8, bottom: 8, zIndex: 7, display: "flex", flexDirection: "column", gap: 4 }}>
-          <button className="btn btn-ghost" style={zoomBtn} onClick={() => zoomBy(1.4)} title="Zoom in" aria-label="Zoom in">+</button>
-          <button className="btn btn-ghost" style={zoomBtn} onClick={() => zoomBy(1 / 1.4)} title="Zoom out" aria-label="Zoom out">−</button>
+          <button className="btn btn-ghost" style={zoomBtn} onClick={() => zoomBy(1.4)} title="放大" aria-label="放大">+</button>
+          <button className="btn btn-ghost" style={zoomBtn} onClick={() => zoomBy(1 / 1.4)} title="缩小" aria-label="缩小">−</button>
           <button className="btn btn-ghost" style={{ ...zoomBtn, fontSize: "0.6rem" }} onClick={resetView} title={t("map.zoomReset")} aria-label={t("map.zoomReset")} disabled={zoom === 1}>1:1</button>
         </div>
       </div>

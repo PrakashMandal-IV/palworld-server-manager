@@ -100,7 +100,7 @@ export default function Shell({ children }) {
         {/* footer: app version / update + theme */}
         <div style={{ padding: "0.55rem", borderTop: "1px solid var(--line-strong)", flexShrink: 0 }}>
           {!collapsed && ver?.updateAvailable && (
-            <button onClick={openRelease} title="Open the latest release to download"
+            <button onClick={openRelease} title="打开最新发布版本以进行下载"
               style={{
                 width: "100%", marginBottom: "0.5rem", padding: "0.45rem 0.6rem", borderRadius: 8,
                 background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer",
