@@ -26,6 +26,11 @@ a server (new or existing), and manage everything from a clean interface.
 
 - **Provision new servers** via SteamCMD, or **adopt an existing** Palworld dedicated
   server install (it keeps your world, settings, and admin password).
+- **Cross-platform hosting** — provision a **Windows** or **Linux** server regardless of
+  the host OS, and run a Windows-target server on a Linux machine through **Wine** (per-world
+  Wine binary, prefix, and launch flags). This is how you run Windows-only mods while
+  self-hosting on Linux. (Requires Wine on the Linux host; a Linux-target world can't run
+  on Windows.)
 - **Start / stop / restart / update** each world with one click. A crash guardian can
   automatically restart a server that goes down, and an optional **auto-update** keeps a
   world on the latest Palworld build — warning players in-game before it restarts to apply.

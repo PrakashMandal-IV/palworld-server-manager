@@ -3,6 +3,35 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] — Unreleased
+
+### At a glance
+- Run a **Windows** Palworld server on a **Linux** host through Wine — the way to get
+  Windows-only mods working while self-hosting on Linux.
+- Pick a world's target platform (Windows or Linux) when you create it, independent of
+  the machine you're running on.
+- Per-world Wine settings (binary, prefix, launch flags) and custom environment variables.
+
+### Added
+- **Cross-platform provisioning.** SteamCMD can now fetch the Windows *or* Linux server
+  files regardless of the host OS (`@sSteamCmdForcePlatformType`), so a Linux machine can
+  install a Windows-target server. A platform picker appears when creating a world, and
+  adopting an existing install detects its platform automatically.
+- **Run Windows servers on Linux via Wine.** A Windows-target world on a Linux host is
+  launched through Wine, with a per-world **Wine binary**, **WINEPREFIX** (auto-managed
+  per world by default), and **Wine launch flags** in the Admin tab. This is what makes
+  Windows-only UE4SS mods runnable on a Linux host.
+- **Custom per-world environment variables**, applied to the server process on launch.
+- The server config path (`WindowsServer` vs `LinuxServer`) now follows the world's target
+  platform rather than the host OS — fixing settings resolution for cross-platform worlds.
+
+### Notes
+- A Linux-target world still can't run on a Windows host — there's no reverse Wine path,
+  so that combination is rejected with a clear message.
+- Wine cross-platform hosting requires Wine installed on the Linux machine.
+
+_Wine cross-platform provisioning contributed by Ralebrig ([#12](https://github.com/PrakashMandal-IV/palworld-server-manager/pull/12))._
+
 ## [2.4.0] — 2026-07-18
 
 ### At a glance
