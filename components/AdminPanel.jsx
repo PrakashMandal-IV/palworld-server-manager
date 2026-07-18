@@ -104,7 +104,7 @@ export default function AdminPanel({ world, running, onChange }) {
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="label">{t("admin.extraArgs")}</label>
-            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="-e.g. -NoAsyncLoadingThread" />
+            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="-例如 -NoAsyncLoadingThread" />
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.8rem", marginTop: "0.9rem", flexWrap: "wrap" }}>
