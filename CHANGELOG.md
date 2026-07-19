@@ -15,6 +15,13 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   for a set time, freeing the machine when everyone's logged off. A player joining resets
   the timer, and — if the world has a Discord webhook or bot — players get a one-minute
   warning before it goes down.
+- Run a **Windows** Palworld server on a **Linux** host through Wine — the way to get
+  Windows-only mods working while self-hosting on Linux.
+- Pick a world's target platform (Windows or Linux) when you create it, independent of
+  the machine you're running on.
+- **PalSchema mod support** — install the framework in one click and import the JSON
+  data-table/blueprint mods (the kind published on Nexus) straight from the Mods tab.
+- Fixed: the chat mod could show every message twice in the Chat tab and Discord relay.
 
 ### Added
 - **Minimize to the system tray.** A tray icon now sits with your other background apps.
@@ -42,6 +49,43 @@ This project adheres to [Semantic Versioning](https://semver.org/).
   warning, the **Discord Bot** tab gains a channel picker — the bot posts the heads-up
   there when the world has no webhook. It's optional, and the bot still only ever posts
   what you've asked it to.
+
+- **Cross-platform provisioning.** SteamCMD can now fetch the Windows *or* Linux server
+  files regardless of the host OS (`@sSteamCmdForcePlatformType`), so a Linux machine can
+  install a Windows-target server. A platform picker appears when creating a world, and
+  adopting an existing install detects its platform automatically.
+
+- **Run Windows servers on Linux via Wine.** A Windows-target world on a Linux host is
+  launched through Wine, with a per-world **Wine binary**, **WINEPREFIX** (auto-managed
+  per world by default), and **Wine launch flags** in the Admin tab. This is what makes
+  Windows-only UE4SS mods runnable on a Linux host. Custom per-world **environment
+  variables** are applied to the server process on launch too. The server config path
+  (`WindowsServer` vs `LinuxServer`) now follows the world's target platform rather than
+  the host OS, fixing settings resolution for cross-platform worlds.
+
+- **PalSchema mods.** The Mods tab can now install the [PalSchema](https://github.com/Okaetsu/PalSchema)
+  framework (downloaded from GitHub, or from a zip you provide) and import, enable/disable,
+  and remove its content mods — the JSON mods that edit Palworld's data tables and
+  blueprints, common on Nexus. Mods land in `ue4ss/Mods/PalSchema/mods`, PalSchema is
+  wired into `mods.txt` automatically, and disabling a mod parks it rather than deleting
+  it. Requires UE4SS (installed in the same tab) and a Windows-target world — which, with
+  the Wine support above, can be hosted on Linux too. Mods that also ship packaged assets
+  (`.pak`) are flagged, since PalSchema loads only the JSON part.
+
+### Fixed
+- **Chat showing every message twice.** With the chat mod installed, each in-game message
+  could appear twice in the Chat tab and be relayed to Discord twice, while in-game chat
+  itself was fine. Some server/UE4SS builds now echo chat to the server console as well as
+  to the chat mod's file, and the app was capturing from both. It now treats the chat
+  mod's file as the single source when it's present, and only reads chat from the console
+  as a fallback when the mod isn't in use.
+
+### Notes
+- A Linux-target world still can't run on a Windows host — there's no reverse Wine path,
+  so that combination is rejected with a clear message.
+- Wine cross-platform hosting requires Wine installed on the Linux machine.
+
+_Wine cross-platform provisioning contributed by Ralebrig ([#12](https://github.com/PrakashMandal-IV/palworld-server-manager/pull/12))._
 
 ## [2.4.0] — 2026-07-18
 

@@ -10,6 +10,10 @@ export default function AdminPanel({ world, running, onChange }) {
   const [password, setPassword] = useState(world.admin_password);
   const [serverPassword, setServerPassword] = useState(world.server_password || "");
   const [extraArgs, setExtraArgs] = useState(world.extra_args || "");
+  const [envVars, setEnvVars] = useState(envObjectToText(world.env_vars));
+  const [wineBinary, setWineBinary] = useState(world.wine_binary || "wine");
+  const [winePrefix, setWinePrefix] = useState(world.wine_prefix || "");
+  const [wineLaunchFlags, setWineLaunchFlags] = useState(world.wine_launch_flags || "");
   const [autostart, setAutostart] = useState(!!world.autostart);
   const [crashGuard, setCrashGuard] = useState(!!world.crash_guard);
   const [community, setCommunity] = useState(!!world.community_server);
@@ -65,7 +69,30 @@ export default function AdminPanel({ world, running, onChange }) {
     try {
       await api(`/api/worlds/${world.world_id}`, {
         method: "PATCH",
-        body: { display_name: name, admin_password: password, server_password: serverPassword, extra_args: extraArgs, autostart: autostart ? 1 : 0, crash_guard: crashGuard ? 1 : 0, community_server: community ? 1 : 0, legacy_perf_flags: legacyPerf ? 1 : 0 },
+        body: {
+          display_name: name, admin_password: password, server_password: serverPassword,
+          extra_args: extraArgs, env_vars: envTextToObject(envVars),
+                autostart: autostart ? 1 : 0, crash_guard: crashGuard ? 1 : 0, community_server: community ? 1 : 0,
+                legacy_perf_flags: legacyPerf ? 1 : 0,
+        },
+      });
+      toast(t("admin.profileSaved"), "success");
+      onChange();
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSaving(false); }
+  };
+
+  const saveWine = async () => {
+    if (running) return toast(t("admin.stopBeforeWine"), "error");
+    setSaving(true);
+    try {
+      await api(`/api/worlds/${world.world_id}`, {
+        method: "PATCH",
+        body: {
+          wine_binary: wineBinary.trim() || "wine",
+                wine_prefix: winePrefix.trim() || null,
+                wine_launch_flags: wineLaunchFlags.trim(),
+        },
       });
       toast(t("admin.profileSaved"), "success");
       onChange();
@@ -104,13 +131,49 @@ export default function AdminPanel({ world, running, onChange }) {
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label className="label">{t("admin.extraArgs")}</label>
-            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="-e.g. -NoAsyncLoadingThread" />
+            <input className="input" value={extraArgs} onChange={(e) => setExtraArgs(e.target.value)} placeholder="e.g. -NoAsyncLoadingThread" />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label className="label">{t("admin.envVars")}</label>
+            <textarea className="input" rows={3} style={{ fontFamily: "monospace", resize: "vertical" }}
+              value={envVars} onChange={(e) => setEnvVars(e.target.value)}
+              placeholder={"WINEDEBUG=-all\nSOME_VAR=value"} />
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.74rem", marginTop: 4 }}>{t("admin.envVarsHint")}</p>
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.8rem", marginTop: "0.9rem", flexWrap: "wrap" }}>
           <Toggle label={t("admin.autostart")} on={autostart} onClick={() => setAutostart((v) => !v)} />
           <Toggle label={t("admin.crashGuard")} on={crashGuard} onClick={() => setCrashGuard((v) => !v)} />
         </div>
+
+        {world.platform === "windows" && (
+          <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", marginTop: "0.9rem" }}>
+            <div className="heading" style={{ fontSize: "0.92rem" }}>{t("admin.wineTitle")}</div>
+            <p className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem", marginTop: 2 }}>{t("admin.wineDesc")}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem", marginTop: "0.6rem" }}>
+              <div>
+                <label className="label">{t("admin.wineBinary")}</label>
+                <input className="input" value={wineBinary} onChange={(e) => setWineBinary(e.target.value)} disabled={running} placeholder="wine" />
+              </div>
+              <div>
+                <label className="label">{t("admin.winePrefix")}</label>
+                <input className="input" value={winePrefix} onChange={(e) => setWinePrefix(e.target.value)} disabled={running} placeholder={t("admin.winePrefixPlaceholder")} />
+              </div>
+              <div style={{ gridColumn: "1 / -1" }}>
+                <label className="label">{t("admin.wineLaunchFlags")}</label>
+                <input className="input" value={wineLaunchFlags} onChange={(e) => setWineLaunchFlags(e.target.value)} disabled={running} placeholder={t("admin.wineLaunchFlagsPlaceholder")} />
+                <p className="subtle" style={{ fontWeight: 600, fontSize: "0.74rem", marginTop: 4 }}>
+                  {t("admin.wineLaunchFlagsHint")}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.7rem" }}>
+              <button className="btn btn-ghost" onClick={saveWine} disabled={saving || running}>
+                {saving ? t("common.saving") : t("common.save")}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="panel-inset" style={{ padding: "0.9rem 1.1rem", marginTop: "0.9rem", borderLeft: `3px solid ${community ? "var(--green-bright)" : "var(--line-strong)"}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
@@ -208,4 +271,25 @@ function Toggle({ label, on, onClick }) {
       <span className="statdot" style={{ background: on ? "var(--accent-ink)" : "var(--ink-soft)" }} /> {label}
     </button>
   );
+}
+
+// worlds.env_vars is stored as a JSON object; the UI edits it as plain
+// "KEY=value" lines, one per line, "#" for comments.
+function envObjectToText(json) {
+  try {
+    const obj = JSON.parse(json || "{}");
+    return Object.entries(obj).map(([k, v]) => `${k}=${v}`).join("\n");
+  } catch { return ""; }
+}
+function envTextToObject(text) {
+  const out = {};
+  for (const raw of String(text).split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const i = line.indexOf("=");
+    if (i === -1) continue;
+    const k = line.slice(0, i).trim();
+    if (k) out[k] = line.slice(i + 1).trim();
+  }
+  return out;
 }

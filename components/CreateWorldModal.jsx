@@ -81,6 +81,8 @@ function NewInstall({ onBack, onClose, onDone }) {
   const [password, setPassword] = useState("");
   const [starting, setStarting] = useState(false);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
+  const hostPlatform = isElectron && window.desktop?.platform === "win32" ? "windows" : "linux";
+  const [platform, setPlatform] = useState(hostPlatform);
 
   const pickDir = async () => {
     if (isElectron) { const p = await window.desktop.pickDirectory(); if (p) setDir(p); }
@@ -93,7 +95,10 @@ function NewInstall({ onBack, onClose, onDone }) {
     if (!dir.trim()) return toast(t("create.chooseFolderFirst"), "error");
     setStarting(true);
     try {
-      await api("/api/provision", { method: "POST", body: { display_name: name, install_dir: dir.trim(), ports, admin_password: password || undefined } });
+      await api("/api/provision", { method: "POST", body: {
+        display_name: name, install_dir: dir.trim(), ports,
+        admin_password: password || undefined, platform,
+      } });
       try { window.__palJobsPing?.(); } catch {}
       toast(t("create.installStarted"), "success");
       onDone();
@@ -112,6 +117,12 @@ function NewInstall({ onBack, onClose, onDone }) {
           </div>
         </Field>
         <PortGrid ports={ports} setPorts={setPorts} />
+        <Field label={t("create.targetPlatform")} hint={t("create.targetPlatformHint")}>
+          <select className="input" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+            <option value="linux">{t("create.targetPlatformLinux")}{hostPlatform === "linux" ? ` ${t("create.targetPlatformThisMachine")}` : ""}</option>
+            <option value="windows">{t("create.targetPlatformWindows")}{hostPlatform === "windows" ? ` ${t("create.targetPlatformThisMachine")}` : ""}</option>
+          </select>
+        </Field>
         <Field label={t("create.adminPassword")} hint={t("create.adminPasswordHint")}>
           <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} />
         </Field>

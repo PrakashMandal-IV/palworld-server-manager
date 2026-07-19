@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export async function GET(_req, { params }) {
   const w = dbm.getWorld(params.id);
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
-  const s = ini.readSettings(w.install_dir);
+  const s = ini.readSettings(w.install_dir, w.platform);
   const MANAGED = new Set(["PublicPort","RESTAPIPort","RESTAPIEnabled","RCONPort","RCONEnabled","AdminPassword","ServerPassword","PublicIP"]);
   const portable = {};
   for (const [k, v] of Object.entries(s.options)) if (!MANAGED.has(k)) portable[k] = v;

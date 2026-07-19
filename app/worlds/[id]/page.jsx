@@ -13,6 +13,7 @@ import SchedulePanel from "@/components/SchedulePanel";
 import MapPanel from "@/components/MapPanel";
 import ModsPanel from "@/components/ModsPanel";
 import Ue4ssPanel from "@/components/Ue4ssPanel";
+import PalSchemaPanel from "@/components/PalSchemaPanel";
 import AdminPanel from "@/components/AdminPanel";
 import ChatPanel from "@/components/ChatPanel";
 import BroadcastPanel from "@/components/BroadcastPanel";
@@ -184,6 +185,9 @@ export default function WorldDetail() {
             </div>
             <div style={{ borderTop: "1px solid var(--line)", paddingTop: "1.4rem" }}>
               <Ue4ssPanel worldId={id} running={running} />
+            </div>
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: "1.4rem" }}>
+              <PalSchemaPanel worldId={id} world={world} running={running} />
             </div>
           </div>
         )}
