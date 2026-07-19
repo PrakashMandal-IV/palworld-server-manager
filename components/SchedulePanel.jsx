@@ -19,6 +19,7 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
   const [onScreenReady, setOnScreenReady] = useState(null); // null = unknown, true/false once checked
 
   const isMessageJob = MESSAGE_JOBS.includes(jobType);
+  const isIdleJob = jobType === "idle_stop";
 
   // On-screen notices are delivered through the PSMBroadcast mod, which is set up on
   // the Broadcast tab. Check whether it's installed so we can warn (and offer a jump
@@ -33,10 +34,13 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
 
   const onScreenModMissing = jobType === "onscreen_notice" && onScreenReady === false;
 
-  // Switching to a non-message job clears the join trigger (it only applies to messages).
+  // Switching jobs can leave the mode on something the new job doesn't support: the
+  // join trigger is message-only, and idle auto-stop only takes an elapsed-time
+  // threshold (no daily/on_join). Snap back to a valid mode in either case.
   const onJobType = (v) => {
     setJobType(v);
     if (mode === "on_join" && !MESSAGE_JOBS.includes(v)) setMode("interval");
+    if (v === "idle_stop" && !["interval", "minutes"].includes(mode)) setMode("interval");
   };
 
   const add = async () => {
@@ -70,6 +74,11 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
   };
 
   const describeWhen = (s) => {
+    if (s.job_type === "idle_stop") {
+      return s.mode === "minutes"
+        ? t("schedule.idleAfterMinutes", { minutes: s.interval_minutes })
+        : t("schedule.idleAfterHours", { hours: s.interval_hours });
+    }
     if (s.mode === "minutes") return t("schedule.everyMinutes", { minutes: s.interval_minutes });
     if (s.mode === "daily") return t("schedule.dailyAt", { time: s.time_of_day });
     if (s.mode === "on_join") {
@@ -110,14 +119,15 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
               <option value="update">{t("schedule.jobType.update")}</option>
               <option value="system_message">{t("schedule.jobType.system_message")}</option>
               <option value="onscreen_notice">{t("schedule.jobType.onscreen_notice")}</option>
+              <option value="idle_stop">{t("schedule.jobType.idle_stop")}</option>
             </select>
           </div>
           <div>
             <label className="label">{t("schedule.when")}</label>
             <select className="input" value={mode} onChange={(e) => setMode(e.target.value)}>
-              <option value="interval">{t("schedule.everyNHours")}</option>
-              <option value="minutes">{t("schedule.everyNMinutes")}</option>
-              <option value="daily">{t("schedule.dailyAtTime")}</option>
+              <option value="interval">{isIdleJob ? t("schedule.afterNHours") : t("schedule.everyNHours")}</option>
+              <option value="minutes">{isIdleJob ? t("schedule.afterNMinutes") : t("schedule.everyNMinutes")}</option>
+              {!isIdleJob && <option value="daily">{t("schedule.dailyAtTime")}</option>}
               {isMessageJob && <option value="on_join">{t("schedule.whenJoins")}</option>}
             </select>
           </div>
@@ -162,6 +172,11 @@ export default function SchedulePanel({ worldId, world, schedules, onChange, onG
               {mode === "on_join" && ` ${t("schedule.playerFilterHint")} ${t("schedule.joinDelayHint")} ${t("schedule.playerTokenHint")}`}
             </p>
           </div>
+        )}
+        {isIdleJob && (
+          <p className="subtle" style={{ fontWeight: 600, fontSize: "0.72rem", margin: 0 }}>
+            {t("schedule.idleHint")}
+          </p>
         )}
       </div>
 

@@ -203,7 +203,7 @@ export default function DiscordBotPanel({ world }) {
   const { t } = useTranslation();
   const [cfg, setCfg] = useState(null);
   const [status, setStatus] = useState({ connected: false, guilds: 0 });
-  const [dir, setDir] = useState({ roles: [], members: [], membersNeedIntent: false });
+  const [dir, setDir] = useState({ roles: [], members: [], channels: [], membersNeedIntent: false });
   const [token, setToken] = useState("");
   const [userId, setUserId] = useState("");
   const [filter, setFilter] = useState("");
@@ -216,7 +216,7 @@ export default function DiscordBotPanel({ world }) {
   const loadDir = useCallback(async () => {
     try {
       const d = await api(`/api/worlds/${world.world_id}/discord-bot/directory`);
-      setDir({ roles: d.roles || [], members: d.members || [], membersNeedIntent: !!d.membersNeedIntent });
+      setDir({ roles: d.roles || [], members: d.members || [], channels: d.channels || [], membersNeedIntent: !!d.membersNeedIntent });
     } catch { /* leave whatever we had */ }
   }, [world.world_id]);
 
@@ -408,6 +408,37 @@ export default function DiscordBotPanel({ world }) {
               <Trans i18nKey="bot.step3Desc" components={{ b: <b />, code: <code /> }} />
             </p>
           )}
+        </div>
+      )}
+
+      {/* ---- notify channel: where idle auto-stop warnings post ---- */}
+      {cfg.authorized && (
+        <div className="panel" style={panel}>
+          <h3 className="heading" style={step}>{t("bot.notifyChannelTitle")}</h3>
+          <p className="subtle" style={{ fontSize: "0.78rem", marginTop: 0 }}>{t("bot.notifyChannelDesc")}</p>
+          <select
+            className="input"
+            style={{ maxWidth: 320 }}
+            value={cfg.notifyChannelId || ""}
+            onChange={(e) => {
+              const id = e.target.value;
+              const name = (dir.channels.find((c) => c.id === id) || {}).name || "";
+              // Reflect the choice immediately; the POST persists it.
+              setCfg({ ...cfg, notifyChannelId: id, notifyChannelName: name });
+              save({ notifyChannel: { id, name } }, id ? t("bot.notifyChannelSaved") : t("bot.notifyChannelCleared"));
+            }}
+            disabled={busy}
+          >
+            <option value="">{t("bot.notifyChannelNone")}</option>
+            {/* A previously-chosen channel that isn't in the freshly-loaded list (renamed,
+                or the list hasn't loaded) still needs to show as selected. */}
+            {cfg.notifyChannelId && !dir.channels.some((c) => c.id === cfg.notifyChannelId) && (
+              <option value={cfg.notifyChannelId}>#{cfg.notifyChannelName || cfg.notifyChannelId}</option>
+            )}
+            {dir.channels.map((c) => (
+              <option key={c.id} value={c.id}>#{c.name}</option>
+            ))}
+          </select>
         </div>
       )}
 

@@ -103,9 +103,23 @@ export async function POST(req, { params }) {
     }
   }
 
+  // --- notify channel for idle auto-stop warnings ---
+  // { notifyChannel: { id, name } } — an empty/invalid id clears it (falls back to
+  // "no bot announcement"). Only real snowflakes are stored.
+  if (body.notifyChannel && typeof body.notifyChannel === "object") {
+    const id = String(body.notifyChannel.id || "").trim();
+    const valid = /^\d{5,25}$/.test(id);
+    bot.writeConfig(params.id, {
+      notifyChannelId: valid ? id : "",
+      notifyChannelName: valid ? String(body.notifyChannel.name || "").trim() : "",
+    });
+  }
+
   // --- unlink the guild, keep the bot ---
   if (body.unlink === true) {
-    bot.writeConfig(params.id, { guildId: "", guildName: "", authorizedAt: 0, authorizedBy: "", allowedRoles: [], allowedUsers: [] });
+    // The notify channel belonged to that guild — drop it too, or it would point at a
+    // channel the bot no longer shares once relinked elsewhere.
+    bot.writeConfig(params.id, { guildId: "", guildName: "", authorizedAt: 0, authorizedBy: "", allowedRoles: [], allowedUsers: [], notifyChannelId: "", notifyChannelName: "" });
   }
 
   return NextResponse.json({ ok: true, config: cfgLib.publicConfig(dbm.getWorld(params.id)), status: bot.botStatus(params.id) });

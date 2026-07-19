@@ -30,10 +30,10 @@ export async function GET(_req, { params }) {
   if (!w) return NextResponse.json({ ok: false, error: "not found" }, { status: 404 });
 
   const cfg = bot.readConfig(params.id);
-  if (!cfg.token || !cfg.guildId) return NextResponse.json({ ok: true, roles: [], members: [], membersNeedIntent: false });
+  if (!cfg.token || !cfg.guildId) return NextResponse.json({ ok: true, roles: [], members: [], channels: [], membersNeedIntent: false });
 
   const headers = { Authorization: `Bot ${cfg.token}` };
-  const out = { ok: true, roles: [], members: [], membersNeedIntent: false };
+  const out = { ok: true, roles: [], members: [], channels: [], membersNeedIntent: false };
 
   // ---- roles ----
   try {
@@ -79,6 +79,21 @@ export async function GET(_req, { params }) {
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
     } else out.membersError = `Discord returned ${res.status}`;
   } catch (e) { out.membersError = e.message; }
+
+  // ---- channels (text channels the bot could post idle warnings to) ----
+  // Just the bot token — listing channels needs no privileged intent. Text (0) and
+  // announcement (5) channels only; whether the bot may actually *send* in one isn't
+  // knowable here, so a failed post is reported later by postToChannel.
+  try {
+    const res = await fetch(`${API}/guilds/${cfg.guildId}/channels`, { headers });
+    if (res.ok) {
+      const chans = await res.json();
+      out.channels = (Array.isArray(chans) ? chans : [])
+        .filter((c) => c && (c.type === 0 || c.type === 5))
+        .sort((a, b) => (a.position || 0) - (b.position || 0) || String(a.name).localeCompare(String(b.name)))
+        .map((c) => ({ id: String(c.id), name: String(c.name || "") }));
+    } else out.channelsError = `Discord returned ${res.status}`;
+  } catch (e) { out.channelsError = e.message; }
 
   return NextResponse.json(out);
 }

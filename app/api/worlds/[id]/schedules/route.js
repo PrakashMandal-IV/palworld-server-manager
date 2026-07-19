@@ -10,7 +10,7 @@ export async function GET(_req, { params }) {
   return NextResponse.json({ ok: true, schedules: dbm.listSchedules(params.id) });
 }
 
-const JOB_TYPES = ["restart", "backup", "update", "system_message", "onscreen_notice"];
+const JOB_TYPES = ["restart", "backup", "update", "system_message", "onscreen_notice", "idle_stop"];
 const MODES = ["interval", "daily", "minutes", "on_join"];
 const MESSAGE_JOBS = ["system_message", "onscreen_notice"];
 
@@ -26,6 +26,13 @@ export async function POST(req, { params }) {
   if (isMessageJob && !message) return NextResponse.json({ ok: false, error: "A message is required for message jobs." }, { status: 400 });
   // on_join only makes sense for the message jobs (there's a player to greet).
   if (mode === "on_join" && !isMessageJob) return NextResponse.json({ ok: false, error: "The join trigger is only available for message jobs." }, { status: 400 });
+
+  // idle_stop is presence-driven: its mode carries how long "nobody online" must last
+  // before the world stops, so only the elapsed-time modes make sense. It takes no
+  // message and never uses daily/on_join.
+  if (job_type === "idle_stop" && !["interval", "minutes"].includes(mode)) {
+    return NextResponse.json({ ok: false, error: "Idle auto-stop uses an hours or minutes threshold." }, { status: 400 });
+  }
 
   // How long to wait after the join before sending. Capped at an hour — past that
   // it isn't a reaction to the join any more, and the timer only lives in memory.

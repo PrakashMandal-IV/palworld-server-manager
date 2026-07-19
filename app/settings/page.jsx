@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const [catalog, setCatalog] = useState(null); // null=loading, {checked,packs}=loaded
   const [busyCode, setBusyCode] = useState(""); // code currently installing/updating/deleting
   const [autoLaunch, setAutoLaunchState] = useState(null);
+  const [closeToTray, setCloseToTrayState] = useState(null);
   const isElectron = typeof window !== "undefined" && window.desktop?.isElectron;
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function SettingsPage() {
     api("/api/i18n/languages").then((r) => setLangs(r.languages || [])).catch(() => {});
     loadCatalog();
     if (isElectron) window.desktop.getAutoLaunch().then(setAutoLaunchState).catch(() => setAutoLaunchState(true));
+    if (isElectron && window.desktop.getCloseToTray) window.desktop.getCloseToTray().then(setCloseToTrayState).catch(() => setCloseToTrayState(true));
   }, []);
 
   const loadCatalog = (force) =>
@@ -101,6 +103,14 @@ export default function SettingsPage() {
     setAutoLaunchState(next);
     try { await window.desktop.setAutoLaunch(next); }
     catch (e) { setAutoLaunchState(!next); toast(e.message, "error"); }
+  };
+
+  const toggleCloseToTray = async () => {
+    if (!isElectron || closeToTray === null) return;
+    const next = !closeToTray;
+    setCloseToTrayState(next);
+    try { await window.desktop.setCloseToTray(next); }
+    catch (e) { setCloseToTrayState(!next); toast(e.message, "error"); }
   };
 
   const save = async (patch) => {
@@ -249,6 +259,19 @@ export default function SettingsPage() {
               {autoLaunch !== false ? t("common.on") : t("common.off")}
             </button>
             <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>{t("settings.autoLaunchDesc")}</span>
+          </div>
+        </div>
+      )}
+
+      {isElectron && (
+        <div className="panel" style={{ padding: "1.3rem", marginBottom: "1rem" }}>
+          <h3 className="heading" style={{ fontSize: "1.05rem", marginTop: 0 }}>{t("settings.closeToTrayTitle")}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <button className={`btn ${closeToTray !== false ? "btn-primary" : "btn-ghost"}`} style={{ padding: "0.35rem 0.7rem" }}
+              onClick={toggleCloseToTray} disabled={closeToTray === null}>
+              {closeToTray !== false ? t("common.on") : t("common.off")}
+            </button>
+            <span className="subtle" style={{ fontWeight: 600, fontSize: "0.78rem" }}>{t("settings.closeToTrayDesc")}</span>
           </div>
         </div>
       )}

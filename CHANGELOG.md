@@ -3,6 +3,46 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] — 2026-07-19
+
+### At a glance
+- The app now lives in the **system tray**. Closing its window tucks it away instead of
+  quitting, so your servers keep running in the background — reopen it, or quit for real,
+  from the tray icon. There's a Settings switch if you'd rather the close button quit.
+- **Starting at login now opens straight to the tray**, out of your way. The tray menu
+  lists your worlds; click one and the app opens right on that world.
+- A new **"Stop when empty" scheduled job** shuts a world down once nobody has been online
+  for a set time, freeing the machine when everyone's logged off. A player joining resets
+  the timer, and — if the world has a Discord webhook or bot — players get a one-minute
+  warning before it goes down.
+
+### Added
+- **Minimize to the system tray.** A tray icon now sits with your other background apps.
+  Closing the window hides it there and leaves your servers running; open it again with a
+  click, or right-click for a menu that opens the app, jumps to a specific world, or quits
+  for good. A new **Settings → "Close to system tray"** switch (on by default) lets you go
+  back to the old behaviour where the close button quits. On Linux the tray needs a
+  StatusNotifier host (most desktops have one); if none is available the app quietly runs
+  without a tray rather than failing to start.
+
+- **Start to the tray, with world shortcuts.** When the app starts itself at login it now
+  opens straight to the tray with no window, so a machine that boots into your servers
+  doesn't shove the manager in your face. The tray's menu lists every world by name with a
+  dot showing whether it's running; picking one opens the app already on that world.
+
+- **Stop a world when nobody's on it.** A new **"Stop when empty"** job on the Schedule tab
+  stops a world once it's had no players for however long you set (minutes or hours) —
+  handy for freeing the PC after your friends log off. Any player joining resets the
+  countdown, so it only ever fires on a truly empty server. If the world has a Discord
+  webhook or bot set up, it posts a one-minute heads-up first (webhook preferred, bot
+  otherwise); with neither, it just shuts the server down. It reads who's online through
+  the REST API, so that needs to be on.
+
+- **A channel for the bot to warn in.** So the Discord bot can deliver that idle-shutdown
+  warning, the **Discord Bot** tab gains a channel picker — the bot posts the heads-up
+  there when the world has no webhook. It's optional, and the bot still only ever posts
+  what you've asked it to.
+
 ## [2.4.0] — 2026-07-18
 
 ### At a glance

@@ -1,5 +1,5 @@
 // electron/main.js
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme, Menu, Tray, nativeImage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -11,6 +11,15 @@ const PORT = 4317;
 let mainWindow = null;
 let nextProc = null;
 let serverReady = false;
+let tray = null;
+
+// Set the moment a real quit is requested (tray Quit, or before-quit) so the window's
+// close handler knows to actually close instead of hiding to the tray.
+let quitting = false;
+
+// True when the app was launched at login rather than opened by hand — used to start
+// straight to the tray without a window (feature: autostart to tray). Set in main().
+let launchedHidden = false;
 
 // ---------------------------------------------------------------------------
 // PORTABLE MODE — keep everything next to the .exe, leaving no trace elsewhere.
@@ -36,10 +45,9 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
+    // A second launch (e.g. clicking the shortcut again) reveals the running app,
+    // creating the window if it started to the tray.
+    showWindow();
   });
   main();
 }
@@ -97,11 +105,13 @@ function applyAutostart(enabled) {
         // launch) over process.execPath, which for an AppImage points at the
         // extracted runtime binary rather than the file the user actually has.
         const exe = process.env.APPIMAGE || process.execPath;
+        // --hidden makes the login launch start straight to the tray (no window). A
+        // manual launch from the menu carries no such flag, so it opens normally.
         const entry = [
           "[Desktop Entry]",
           "Type=Application",
           "Name=Palworld Server Manager",
-          `Exec="${exe}"`,
+          `Exec="${exe}" --hidden`,
           "X-GNOME-Autostart-enabled=true",
           "",
         ].join("\n");
@@ -113,7 +123,9 @@ function applyAutostart(enabled) {
     return;
   }
   // Windows (and, best-effort, any other platform): Electron owns this natively.
-  try { app.setLoginItemSettings({ openAtLogin: enabled }); } catch (e) { logToFile(`setLoginItemSettings failed: ${e.message}`); }
+  // args:["--hidden"] so the login launch starts to the tray; openAsHidden covers the
+  // platforms that honour it. A hand-launched copy gets neither and opens a window.
+  try { app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: enabled, args: ["--hidden"] }); } catch (e) { logToFile(`setLoginItemSettings failed: ${e.message}`); }
 }
 
 function initAutostart() {
@@ -123,6 +135,121 @@ function initAutostart() {
     writeAutostartPref(enabled);
   }
   applyAutostart(enabled);
+}
+
+// ---------------------------------------------------------------------------
+// CLOSE TO TRAY — when on (the default), the window's close button hides the app
+// to the system tray instead of quitting, so servers keep running in the
+// background. Off makes the close button quit as before. Persisted next to the
+// other launcher prefs so it survives updates.
+// ---------------------------------------------------------------------------
+function closeToTrayConfigPath() {
+  return path.join(dataDir(), "closetotray.json");
+}
+function readCloseToTrayPref() {
+  try {
+    const v = JSON.parse(fs.readFileSync(closeToTrayConfigPath(), "utf8")).enabled;
+    return typeof v === "boolean" ? v : true;
+  } catch {
+    return true; // default on
+  }
+}
+function writeCloseToTrayPref(enabled) {
+  try { fs.writeFileSync(closeToTrayConfigPath(), JSON.stringify({ enabled: !!enabled })); }
+  catch (e) { logToFile(`Failed to persist close-to-tray pref: ${e.message}`); }
+}
+
+// ---------------------------------------------------------------------------
+// SYSTEM TRAY — a persistent icon whose menu opens the app, jumps straight to a
+// specific world, or quits. On Linux tray support depends on a StatusNotifier
+// host (libappindicator); if creating it throws, we swallow it and carry on
+// without a tray rather than failing to launch.
+// ---------------------------------------------------------------------------
+function trayIconPath() {
+  const base = isDev
+    ? path.join(__dirname, "..", "public")
+    : path.join(process.resourcesPath, "app", "public");
+  // .ico carries the multiple sizes Windows' tray wants; PNG elsewhere.
+  return path.join(base, process.platform === "win32" ? "icon.ico" : "icon.png");
+}
+
+// Pull the world list from the local server for the tray menu. DB-only endpoint, so
+// it's cheap to call on every menu refresh. Never rejects — a failure yields [].
+function fetchWorlds() {
+  return new Promise((resolve) => {
+    const req = http.get(`http://127.0.0.1:${PORT}/api/tray`, (res) => {
+      let data = "";
+      res.on("data", (d) => (data += d));
+      res.on("end", () => {
+        try { const j = JSON.parse(data); resolve(Array.isArray(j.worlds) ? j.worlds : []); }
+        catch { resolve([]); }
+      });
+    });
+    req.on("error", () => resolve([]));
+    req.setTimeout(1500, () => { req.destroy(); resolve([]); });
+  });
+}
+
+// Show the main window (creating it if the app started to the tray), optionally
+// navigating to a specific world first.
+function showWindow(worldId) {
+  if (!serverReady) return;
+  if (!mainWindow) createWindow();
+  const win = mainWindow;
+  if (!win) return;
+  const go = () => {
+    if (worldId) {
+      const base = isDev ? process.env.ELECTRON_START_URL : `http://127.0.0.1:${PORT}`;
+      win.loadURL(`${base}/worlds/${encodeURIComponent(worldId)}`);
+    }
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  };
+  // A window created just now isn't ready to navigate yet; wait for first paint.
+  if (win.webContents.isLoading() && worldId) win.webContents.once("did-finish-load", go);
+  else go();
+}
+
+async function refreshTrayMenu() {
+  if (!tray) return;
+  const worlds = await fetchWorlds();
+  const worldItems = worlds.length
+    ? worlds.map((w) => ({
+        label: `${w.running ? "● " : "○ "}${w.display_name}`,
+        click: () => showWindow(w.world_id),
+      }))
+    : [{ label: "No worlds yet", enabled: false }];
+
+  const menu = Menu.buildFromTemplate([
+    { label: "Open Palworld Server Manager", click: () => showWindow() },
+    { type: "separator" },
+    { label: "Worlds", enabled: false },
+    ...worldItems,
+    { type: "separator" },
+    { label: "Quit", click: () => { quitting = true; app.quit(); } },
+  ]);
+  tray.setContextMenu(menu);
+}
+
+function createTray() {
+  if (tray) return true;
+  try {
+    let img = nativeImage.createFromPath(trayIconPath());
+    if (img.isEmpty()) img = nativeImage.createEmpty();
+    tray = new Tray(img);
+    tray.setToolTip("Palworld Server Manager");
+    // Left-click opens the app (Windows/Linux convention); the menu is right-click.
+    tray.on("click", () => showWindow());
+    refreshTrayMenu();
+    // Keep the world list (names, running dots) current without the window open.
+    setInterval(() => { refreshTrayMenu().catch(() => {}); }, 20000);
+    return true;
+  } catch (e) {
+    logToFile(`Tray unavailable: ${e.message}`);
+    tray = null;
+    return false;
+  }
 }
 
 function startNextServer() {
@@ -212,7 +339,18 @@ function createWindow() {
   const url = isDev ? process.env.ELECTRON_START_URL : `http://127.0.0.1:${PORT}`;
   mainWindow.loadURL(url);
 
-  mainWindow.once("ready-to-show", () => mainWindow.show());
+  // Don't auto-show when we launched straight to the tray — the window is built so a
+  // tray click has something to reveal, but it stays hidden until asked for.
+  mainWindow.once("ready-to-show", () => { if (!launchedHidden) mainWindow.show(); });
+
+  // Close-to-tray: unless a real quit is underway (or the pref is off, or there's no
+  // tray to hide into), the close button hides the window and leaves the app running.
+  mainWindow.on("close", (e) => {
+    if (!quitting && tray && readCloseToTrayPref()) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
   mainWindow.on("closed", () => (mainWindow = null));
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -242,11 +380,31 @@ function main() {
     // Ensures Windows uses our icon (not the default Electron one) in the taskbar.
     if (process.platform === "win32") app.setAppUserModelId("com.palworld.servermanager");
     initAutostart();
+
+    // Did we launch at login (autostart-to-tray) rather than by hand? The .desktop /
+    // login-item pass --hidden; Windows also reports it via getLoginItemSettings.
+    launchedHidden = process.argv.includes("--hidden");
+    try {
+      const li = app.getLoginItemSettings();
+      if (li.wasOpenedAtLogin || li.wasOpenedAsHidden) launchedHidden = true;
+    } catch {}
+
     startNextServer();
     const url = isDev ? process.env.ELECTRON_START_URL : `http://127.0.0.1:${PORT}`;
     serverReady = await waitForServer(url);
-    if (serverReady) createWindow();
-    else showErrorWindow("The bundled web server did not respond within 60 seconds. This usually means a file is missing from the install or a security tool blocked it.");
+
+    if (!serverReady) {
+      // A broken server is worth surfacing even on a hidden launch — otherwise the app
+      // is silently dead in the tray.
+      showErrorWindow("The bundled web server did not respond within 60 seconds. This usually means a file is missing from the install or a security tool blocked it.");
+      return;
+    }
+
+    const hasTray = createTray();
+    // Show a window on a normal launch. On a hidden (login) launch, stay in the tray —
+    // but only if we actually have a tray to live in; without one, fall back to showing
+    // the window so the app is never both invisible and unreachable.
+    if (!launchedHidden || !hasTray) createWindow();
 
     // On macOS, re-create the window when the dock icon is clicked — but ONLY
     // if there truly is no window AND the server is up. This is the guarded
@@ -257,11 +415,16 @@ function main() {
   });
 
   app.on("window-all-closed", () => {
+    // With close-to-tray on, the window hides rather than closes, so this never fires
+    // and the app keeps running in the tray. It only fires when the window genuinely
+    // closes (close-to-tray off, or no tray) — which is a real quit.
     if (nextProc) { try { nextProc.kill(); } catch {} }
-    app.quit(); // quit on all platforms (this is a single-window desktop tool)
+    app.quit();
   });
 
   app.on("before-quit", () => {
+    quitting = true;
+    if (tray) { try { tray.destroy(); } catch {} tray = null; }
     if (nextProc) { try { nextProc.kill(); } catch {} }
   });
 }
@@ -288,5 +451,10 @@ ipcMain.handle("get-auto-launch", () => {
 ipcMain.handle("set-auto-launch", (_e, enabled) => {
   writeAutostartPref(!!enabled);
   applyAutostart(!!enabled);
+  return !!enabled;
+});
+ipcMain.handle("get-close-to-tray", () => readCloseToTrayPref());
+ipcMain.handle("set-close-to-tray", (_e, enabled) => {
+  writeCloseToTrayPref(!!enabled);
   return !!enabled;
 });
