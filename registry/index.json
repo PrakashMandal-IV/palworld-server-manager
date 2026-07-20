@@ -1,7 +1,19 @@
 {
   "schema": 1,
-  "updatedAt": "2026-07-17T15:00:00Z",
+  "updatedAt": "2026-07-21T00:00:00Z",
   "packs": [
+    {
+      "code": "de",
+      "name": "German",
+      "nativeName": "Deutsch",
+      "dir": "ltr",
+      "authors": [
+        "Palworld Server Manager"
+      ],
+      "url": "https://raw.githubusercontent.com/PrakashMandal-IV/palworld-server-manager/main/registry/packs/de.json",
+      "updatedAt": "2026-07-21T00:00:00Z",
+      "completeness": 100
+    },
     {
       "code": "es",
       "name": "Spanish",
