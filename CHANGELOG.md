@@ -3,6 +3,22 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.2] — 2026-08-15
+
+### Fixed
+- **Crash guardian no longer restarts a healthy server on a transient hiccup.** The "API unresponsive"
+  watchdog treated any failed health probe the same as a real hang, so a server that momentarily
+  missed a few checks (slow under load, a transient socket error) could be force-restarted about every
+  two minutes. It now uses a longer probe timeout, **logs the actual reason** each failed check (timeout
+  vs connection refused vs HTTP error) instead of swallowing it, and does a final generous-timeout
+  confirmation probe before restarting — so only a genuinely stuck server gets bounced. (Reported in #35.)
+
+### Changed
+- **Scheduled/auto updates stop crying wolf.** An update job that finds nothing new still restarts the
+  server, but it no longer posts "updated to build X" every night with the same build number. It now
+  says the build was updated only when it actually changed; otherwise it reports that there was no
+  update and the server was restarted. (Requested in #33.)
+
 ## [2.9.1] — 2026-08-15
 
 ### Fixed
