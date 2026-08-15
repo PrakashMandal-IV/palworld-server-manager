@@ -13,14 +13,16 @@ app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
 app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 
-// Run without Chromium's sandbox on Linux (issue #32). The AppImage mounts read-only,
-// so its bundled chrome-sandbox can't be setuid-root, and server distros often restrict
-// unprivileged user namespaces and/or run as root — all of which make Chromium abort
-// with "The SUID sandbox helper binary ... is not configured correctly". Disabling the
-// sandbox is safe here: the renderer only ever loads this app's own 127.0.0.1 UI (external
-// links open in the system browser), so there's no untrusted web content to contain. This
-// also lets the app run as root, which is common on a headless server.
-if (process.platform === "linux") app.commandLine.appendSwitch("no-sandbox");
+// Run without Chromium's sandbox on Linux ONLY when running as root (issue #32, and the
+// blank-window regression it caused in #32's first fix). Electron's sandbox genuinely
+// can't initialize as root — the common headless-server case abol01 hit — so we need
+// --no-sandbox there. But forcing it unconditionally on Linux blanked the window for
+// ordinary non-root desktop AppImage users, whose sandbox works fine, so we gate it on
+// uid 0. It's safe here regardless: the renderer only ever loads this app's own
+// 127.0.0.1 UI. A non-root user with a broken sandbox can still pass --no-sandbox itself.
+if (process.platform === "linux" && typeof process.getuid === "function" && process.getuid() === 0) {
+  app.commandLine.appendSwitch("no-sandbox");
+}
 const path = require("path");
 const fs = require("fs");
 const os = require("os");

@@ -3,6 +3,16 @@
 All notable changes to Palworld Server Manager are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.9.1] — 2026-08-15
+
+### Fixed
+- **Blank window on the Linux AppImage (regression in 2.8.11).** The 2.8.11 fix disabled Chromium's
+  sandbox on *all* Linux to make the AppImage run on headless servers — but that blanked the window
+  for ordinary non-root desktop users, whose sandbox works fine. The sandbox is now disabled only
+  when running as **root** (where Electron genuinely can't sandbox — the headless-server case that
+  #32 was about), so desktop AppImage users get their window back. A non-root user with a broken
+  sandbox can still pass `--no-sandbox` manually.
+
 ## [2.9.0] — 2026-08-09
 
 ### Added
