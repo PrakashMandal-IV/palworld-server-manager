@@ -19,7 +19,7 @@
     "prepare:standalone": "node scripts/prepare-standalone.js"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "discord.js": "^14.27.0",
     "i18next": "^23.16.8",
     "jpeg-js": "^0.4.4",
